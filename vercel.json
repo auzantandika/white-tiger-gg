@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/scan-youtube-live",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }
