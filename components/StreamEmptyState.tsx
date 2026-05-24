@@ -1,5 +1,5 @@
 interface StreamEmptyStateProps {
-  variant: "no-live" | "scanning";
+  variant: "no-live" | "no-tagged-live" | "scanning";
 }
 
 export default function StreamEmptyState({ variant }: StreamEmptyStateProps) {
@@ -12,6 +12,19 @@ export default function StreamEmptyState({ variant }: StreamEmptyStateProps) {
         </p>
         <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-zinc-600">
           Full list may take several minutes to update.
+        </p>
+      </div>
+    );
+  }
+
+  if (variant === "no-tagged-live") {
+    return (
+      <div className="flex min-h-[320px] flex-col items-center justify-center border border-white/10 bg-black/60 px-6 py-16 text-center sm:min-h-[420px] lg:min-h-[480px]">
+        <p className="font-mono text-xl font-bold uppercase tracking-[0.2em] text-zinc-400 sm:text-2xl">
+          No tagged live streams detected.
+        </p>
+        <p className="mt-4 max-w-md font-mono text-[10px] uppercase leading-relaxed tracking-widest text-zinc-600">
+          Switch to All Live to view every confirmed live stream.
         </p>
       </div>
     );

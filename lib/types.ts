@@ -26,6 +26,8 @@ export interface LiveStreamer {
   videoCheckedCount?: number;
   errorMessage?: string;
   lastCheckedAt?: string;
+  matchedTags?: string[];
+  hasAllowedTag?: boolean;
 }
 
 export interface YoutubeLiveResponse {

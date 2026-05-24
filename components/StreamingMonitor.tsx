@@ -11,9 +11,18 @@ import {
   resizeAssignments,
   syncLiveAssignments,
 } from "@/lib/stream-layout";
+import {
+  enrichStreamersWithTags,
+  getLiveStreamerIds,
+  getLiveStreamers,
+  getTaggedLiveStreamers,
+  hasPendingLiveChecks,
+  type LiveFilterMode,
+} from "@/lib/stream-live-filter";
 import type { GridLayout, LiveStreamer, YoutubeLiveResponse } from "@/lib/types";
 import FocusedStreamView from "./FocusedStreamView";
 import LayoutButton from "./LayoutButton";
+import LiveFilterButton from "./LiveFilterButton";
 import StreamEmptyState from "./StreamEmptyState";
 import StreamingMonitorFooter from "./StreamingMonitorFooter";
 import StreamerSidebar from "./StreamerSidebar";
@@ -21,12 +30,6 @@ import StreamingMonitorHeader from "./StreamingMonitorHeader";
 import StreamSlot from "./StreamSlot";
 
 const REFRESH_SECONDS = 300;
-
-function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
-  return streamers
-    .filter((streamer) => streamer.status === "LIVE" && streamer.videoId)
-    .map((streamer) => streamer.id);
-}
 
 function isLargeLayout(
   layout: GridLayout,
@@ -48,6 +51,8 @@ function isLargeLayout(
 export default function StreamingMonitor() {
   const [hasUserSelectedLayout, setHasUserSelectedLayout] = useState(false);
   const [userLayout, setUserLayout] = useState<GridLayout>("ALL");
+  const [liveFilterMode, setLiveFilterMode] =
+    useState<LiveFilterMode>("all-live");
   const [assignmentOverrides, setAssignmentOverrides] = useState<
     (string | null)[] | null
   >(null);
@@ -60,6 +65,7 @@ export default function StreamingMonitor() {
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [scannedCount, setScannedCount] = useState<number | null>(null);
+  const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
 
   const [manuallyClearedIds, setManuallyClearedIds] = useState<Set<string>>(
     () => new Set(),
@@ -84,10 +90,11 @@ export default function StreamingMonitor() {
       }
 
       const data = (await response.json()) as YoutubeLiveResponse;
-      setStreamers(data.streamers);
+      setStreamers(enrichStreamersWithTags(data.streamers));
       setLastCheckedAt(data.lastCheckedAt ?? null);
       setScannedCount(data.scannedCount ?? null);
       setError(null);
+      setHasFetchedOnce(true);
     } catch (err) {
       setError(
         err instanceof Error
@@ -138,7 +145,25 @@ export default function StreamingMonitor() {
     };
   }, [fetchLiveStatus]);
 
-  const liveIds = useMemo(() => getLiveStreamerIds(streamers), [streamers]);
+  const enrichedStreamers = useMemo(
+    () => enrichStreamersWithTags(streamers),
+    [streamers],
+  );
+
+  const liveStreamers = useMemo(
+    () => getLiveStreamers(enrichedStreamers),
+    [enrichedStreamers],
+  );
+
+  const taggedLiveStreamers = useMemo(
+    () => getTaggedLiveStreamers(enrichedStreamers),
+    [enrichedStreamers],
+  );
+
+  const liveIds = useMemo(
+    () => getLiveStreamerIds(enrichedStreamers, liveFilterMode),
+    [enrichedStreamers, liveFilterMode],
+  );
 
   const layout = hasUserSelectedLayout ? userLayout : "ALL";
 
@@ -166,8 +191,8 @@ export default function StreamingMonitor() {
   }, [assignmentOverrides, slotCount, liveIds, activeSkipIds]);
 
   const streamerMap = useMemo(
-    () => new Map(streamers.map((streamer) => [streamer.id, streamer])),
-    [streamers],
+    () => new Map(enrichedStreamers.map((streamer) => [streamer.id, streamer])),
+    [enrichedStreamers],
   );
 
   const focusedStreamer = useMemo(() => {
@@ -186,6 +211,27 @@ export default function StreamingMonitor() {
       setFocusedStreamId(null);
     }
   }, [focusedStreamId, focusedStreamer]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") {
+      return;
+    }
+
+    console.debug("[StreamingMonitor]", {
+      totalStreamers: enrichedStreamers.length,
+      liveStreamers: liveStreamers.length,
+      taggedLiveStreamers: taggedLiveStreamers.length,
+      activeFilter: liveFilterMode,
+      selectedLayout: layout,
+      hasPendingChecks: hasPendingLiveChecks(enrichedStreamers),
+    });
+  }, [
+    enrichedStreamers,
+    liveStreamers.length,
+    taggedLiveStreamers.length,
+    liveFilterMode,
+    layout,
+  ]);
 
   const gridCols = useMemo(() => {
     if (layout === "ALL") {
@@ -270,10 +316,48 @@ export default function StreamingMonitor() {
     setSidebarVisible((visible) => !visible);
   }, []);
 
-  const liveCount = liveIds.length;
-  const showScanning = loading && streamers.length === 0;
-  const showNoLive = !loading && !error && liveCount === 0;
-  const showGrid = !showScanning && !showNoLive && !focusedStreamer;
+  const hasApiResponse = hasFetchedOnce && enrichedStreamers.length > 0;
+  const pendingChecks = hasPendingLiveChecks(enrichedStreamers);
+  const liveCount =
+    liveFilterMode === "tagged-only"
+      ? taggedLiveStreamers.length
+      : liveStreamers.length;
+
+  const showScanning =
+    !error &&
+    (loading && enrichedStreamers.length === 0 ||
+      !hasApiResponse ||
+      (liveFilterMode === "all-live" &&
+        liveStreamers.length === 0 &&
+        pendingChecks) ||
+      (liveFilterMode === "tagged-only" &&
+        taggedLiveStreamers.length === 0 &&
+        liveStreamers.length === 0 &&
+        pendingChecks));
+
+  const showNoLive =
+    !loading &&
+    !error &&
+    hasApiResponse &&
+    liveFilterMode === "all-live" &&
+    liveStreamers.length === 0 &&
+    !pendingChecks;
+
+  const showNoTaggedLive =
+    !loading &&
+    !error &&
+    hasApiResponse &&
+    liveFilterMode === "tagged-only" &&
+    taggedLiveStreamers.length === 0 &&
+    (liveStreamers.length > 0 || !pendingChecks);
+
+  const showGrid =
+    !showScanning &&
+    !showNoLive &&
+    !showNoTaggedLive &&
+    !focusedStreamer &&
+    liveIds.length > 0;
+
   const showSidebar = sidebarVisible;
 
   return (
@@ -284,7 +368,7 @@ export default function StreamingMonitor() {
       <div className="px-2 pt-2 sm:px-3 sm:pt-3">
         <StreamingMonitorHeader
           liveCount={liveCount}
-          totalChannels={streamers.length}
+          totalChannels={enrichedStreamers.length}
           refreshCountdown={refreshCountdown}
           lastCheckedAt={lastCheckedAt}
           scannedCount={scannedCount}
@@ -294,19 +378,40 @@ export default function StreamingMonitor() {
       </div>
 
       {!focusedStreamer && (
-        <div className="mt-2 flex min-w-0 items-center gap-2 border-y border-white/10 bg-black/50 px-2 py-1.5 sm:px-3">
-          <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-600 sm:inline">
-            Layout
-          </span>
-          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {LAYOUT_OPTIONS.map((option) => (
-              <LayoutButton
-                key={option}
-                layout={option}
-                active={layout === option}
-                onClick={() => handleLayoutChange(option)}
+        <div className="mt-2 flex min-w-0 flex-col gap-2 border-y border-white/10 bg-black/50 px-2 py-1.5 sm:px-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-600 sm:inline">
+              Filter
+            </span>
+            <div className="flex min-w-0 gap-1">
+              <LiveFilterButton
+                mode="all-live"
+                label="All Live"
+                active={liveFilterMode === "all-live"}
+                onClick={() => setLiveFilterMode("all-live")}
               />
-            ))}
+              <LiveFilterButton
+                mode="tagged-only"
+                label="Tagged Only"
+                active={liveFilterMode === "tagged-only"}
+                onClick={() => setLiveFilterMode("tagged-only")}
+              />
+            </div>
+          </div>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-600 sm:inline">
+              Layout
+            </span>
+            <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {LAYOUT_OPTIONS.map((option) => (
+                <LayoutButton
+                  key={option}
+                  layout={option}
+                  active={layout === option}
+                  onClick={() => handleLayoutChange(option)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -337,6 +442,9 @@ export default function StreamingMonitor() {
         <div className="stream-stage min-w-0">
           {showScanning && <StreamEmptyState variant="scanning" />}
           {showNoLive && <StreamEmptyState variant="no-live" />}
+          {showNoTaggedLive && (
+            <StreamEmptyState variant="no-tagged-live" />
+          )}
           {focusedStreamer && (
             <FocusedStreamView
               streamer={focusedStreamer}
@@ -396,9 +504,10 @@ export default function StreamingMonitor() {
         >
           {showSidebar && (
             <StreamerSidebar
-              streamers={streamers}
+              streamers={enrichedStreamers}
               loading={loading}
               error={error}
+              liveFilterMode={liveFilterMode}
               onAssignStreamer={handleAssignStreamer}
               onRetry={() => void refreshLiveStatus(true)}
             />
