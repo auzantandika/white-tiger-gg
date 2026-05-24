@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import type { LiveStreamer } from "@/lib/types";
+import type { GridLayout, LiveStreamer } from "@/lib/types";
 import { getStreamerStatusLabel, isApiLimitedError } from "@/lib/stream-status";
 import { buildEmbedUrl, toggleContainerFullscreen } from "@/lib/stream-player";
 import StreamPlayerActions from "./StreamPlayerActions";
@@ -10,15 +10,39 @@ interface StreamSlotProps {
   streamer: LiveStreamer | null;
   isSelected: boolean;
   isLarge?: boolean;
+  isExpanded?: boolean;
+  layout?: GridLayout;
   onSelect: () => void;
   onClear: () => void;
   onFocus?: () => void;
+}
+
+function getSlotMinHeight(
+  isLarge: boolean,
+  isExpanded: boolean,
+  layout?: GridLayout,
+): string {
+  if (isLarge && isExpanded && layout === "1x1") {
+    return "min-h-[min(78vh,960px)]";
+  }
+  if (isLarge && isExpanded) {
+    return "min-h-[min(65vh,840px)]";
+  }
+  if (isLarge) {
+    return "min-h-[min(55vh,720px)]";
+  }
+  if (isExpanded && layout === "1x1") {
+    return "min-h-[min(70vh,880px)]";
+  }
+  return "";
 }
 
 export default function StreamSlot({
   streamer,
   isSelected,
   isLarge = false,
+  isExpanded = false,
+  layout,
   onSelect,
   onClear,
   onFocus,
@@ -29,6 +53,9 @@ export default function StreamSlot({
     Boolean(streamer?.channelUrl) && streamer?.channelUrl !== "#";
   const isApiLimited =
     streamer?.status === "UNKNOWN" && isApiLimitedError(streamer.errorMessage);
+
+  const slotMinHeight = getSlotMinHeight(isLarge, isExpanded, layout);
+  const useAspectRatio = !isLarge && !(isExpanded && layout === "1x1");
 
   const handleFullscreen = useCallback(async () => {
     await toggleContainerFullscreen(containerRef.current);
@@ -47,8 +74,8 @@ export default function StreamSlot({
 
   return (
     <div
-      className={`group flex min-w-0 flex-col gap-1.5 ${
-        isLarge ? "min-h-[min(55vh,720px)]" : ""
+      className={`group flex min-w-0 flex-col gap-1.5 transition-[min-height] duration-300 ease-in-out ${
+        slotMinHeight || ""
       }`}
     >
       <div
@@ -63,9 +90,9 @@ export default function StreamSlot({
             onSelect();
           }
         }}
-        className={`relative w-full min-w-0 overflow-hidden border bg-black transition-all ${
-          isLarge ? "min-h-[min(55vh,720px)] flex-1" : "aspect-video"
-        } ${
+        className={`relative w-full min-w-0 overflow-hidden border bg-black transition-all duration-300 ease-in-out ${
+          useAspectRatio ? "aspect-video" : "flex-1"
+        } ${slotMinHeight} ${
           isSelected
             ? "border-blue-500 ring-1 ring-blue-500/40"
             : hasVideo

@@ -8,11 +8,15 @@ import StreamPlayerActions from "./StreamPlayerActions";
 interface FocusedStreamViewProps {
   streamer: LiveStreamer;
   onBack: () => void;
+  isExpanded?: boolean;
+  withSidebar?: boolean;
 }
 
 export default function FocusedStreamView({
   streamer,
   onBack,
+  isExpanded = false,
+  withSidebar = false,
 }: FocusedStreamViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -20,8 +24,14 @@ export default function FocusedStreamView({
     await toggleContainerFullscreen(containerRef.current);
   }, []);
 
+  const playerMinHeight = isExpanded
+    ? "min-h-[min(80vh,980px)] lg:min-h-[min(82vh,1000px)]"
+    : withSidebar
+      ? "min-h-[220px] sm:min-h-[360px] lg:min-h-[min(68vh,780px)]"
+      : "min-h-[220px] sm:min-h-[360px] lg:min-h-[min(72vh,820px)]";
+
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-3 transition-[width] duration-300 ease-in-out">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate font-mono text-sm uppercase tracking-wider text-white sm:text-base">
@@ -43,7 +53,7 @@ export default function FocusedStreamView({
 
       <div
         ref={containerRef}
-        className="relative aspect-video w-full min-h-[220px] overflow-hidden border border-blue-800/50 bg-black sm:min-h-[360px] lg:min-h-[min(72vh,820px)]"
+        className={`relative aspect-video w-full overflow-hidden border border-blue-800/50 bg-black transition-[min-height] duration-300 ease-in-out ${playerMinHeight}`}
       >
         <iframe
           src={buildEmbedUrl(streamer.videoId)}

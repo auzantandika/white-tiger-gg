@@ -71,3 +71,75 @@ body {
     0 0 32px rgba(37, 99, 235, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
+
+.monitor-content-grid {
+  display: grid;
+  min-width: 0;
+  transition:
+    grid-template-columns 300ms ease-in-out,
+    gap 300ms ease-in-out;
+}
+
+@media (min-width: 1024px) {
+  .monitor-content-grid--with-sidebar {
+    grid-template-columns: minmax(0, 1fr) 15rem;
+  }
+
+  .monitor-content-grid--expanded {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .monitor-content-grid--with-sidebar {
+    grid-template-columns: minmax(0, 1fr) 16rem;
+  }
+}
+
+.stream-stage {
+  min-width: 0;
+  width: 100%;
+  transition: width 300ms ease-in-out;
+}
+
+.monitor-sidebar-slot {
+  min-width: 0;
+  overflow: hidden;
+  transition:
+    max-width 300ms ease-in-out,
+    max-height 300ms ease-in-out,
+    opacity 250ms ease-in-out,
+    width 300ms ease-in-out;
+}
+
+.monitor-sidebar-slot--visible {
+  max-height: 2000px;
+  opacity: 1;
+  width: 100%;
+}
+
+.monitor-sidebar-slot--hidden {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .monitor-sidebar-slot--visible {
+    max-height: none;
+    width: 15rem;
+  }
+
+  .monitor-sidebar-slot--hidden {
+    max-height: none;
+    max-width: 0;
+    width: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .monitor-sidebar-slot--visible {
+    width: 16rem;
+  }
+}

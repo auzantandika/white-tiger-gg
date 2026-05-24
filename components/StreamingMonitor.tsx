@@ -28,11 +28,18 @@ function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
     .map((streamer) => streamer.id);
 }
 
-function isLargeLayout(layout: GridLayout, slotCount: number): boolean {
+function isLargeLayout(
+  layout: GridLayout,
+  slotCount: number,
+  streamAreaExpanded: boolean,
+): boolean {
   if (layout === "1x1") {
     return true;
   }
   if (layout === "2x1" && slotCount <= 2) {
+    return true;
+  }
+  if (streamAreaExpanded && layout === "ALL" && slotCount <= 2) {
     return true;
   }
   return false;
@@ -189,7 +196,8 @@ export default function StreamingMonitor() {
     return FIXED_LAYOUT_SLOTS[layout].cols;
   }, [layout, slotCount]);
 
-  const largeSlots = isLargeLayout(layout, slotCount);
+  const streamAreaExpanded = !sidebarVisible;
+  const largeSlots = isLargeLayout(layout, slotCount, streamAreaExpanded);
 
   const handleLayoutChange = useCallback(
     (nextLayout: GridLayout) => {
@@ -268,7 +276,7 @@ export default function StreamingMonitor() {
   const showScanning = loading && streamers.length === 0;
   const showNoLive = !loading && !error && liveCount === 0;
   const showGrid = !showScanning && !showNoLive && !focusedStreamer;
-  const showSidebar = !focusedStreamer && sidebarVisible;
+  const showSidebar = sidebarVisible;
 
   return (
     <section
@@ -282,7 +290,6 @@ export default function StreamingMonitor() {
           refreshCountdown={refreshCountdown}
           sidebarVisible={sidebarVisible}
           onToggleSidebar={handleToggleSidebar}
-          showSidebarToggle={!focusedStreamer}
         />
       </div>
 
@@ -320,18 +327,34 @@ export default function StreamingMonitor() {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-col gap-2 p-2 sm:gap-3 sm:p-3 lg:flex-row">
-        <div className="min-w-0 flex-1">
+      <div
+        className={`monitor-content-grid gap-2 p-2 sm:gap-3 sm:p-3 ${
+          showSidebar
+            ? "monitor-content-grid--with-sidebar"
+            : "monitor-content-grid--expanded"
+        }`}
+      >
+        <div className="stream-stage min-w-0">
           {showScanning && <StreamEmptyState variant="scanning" />}
           {showNoLive && <StreamEmptyState variant="no-live" />}
           {focusedStreamer && (
             <FocusedStreamView
               streamer={focusedStreamer}
               onBack={handleExitFocus}
+              isExpanded={streamAreaExpanded}
+              withSidebar={showSidebar}
             />
           )}
           {showGrid && (
-            <div className={`grid min-w-0 gap-1 sm:gap-1.5 ${gridCols}`}>
+            <div
+              className={`grid min-w-0 gap-1 transition-[gap] duration-300 ease-in-out sm:gap-1.5 ${
+                streamAreaExpanded ? "sm:gap-2" : ""
+              } ${gridCols} ${
+                layout === "1x1" && streamAreaExpanded
+                  ? "mx-auto w-full max-w-none"
+                  : ""
+              }`}
+            >
               {assignments.map((streamerId, index) => (
                 <StreamSlot
                   key={`slot-${index}`}
@@ -340,6 +363,8 @@ export default function StreamingMonitor() {
                   }
                   isSelected={selectedSlot === index}
                   isLarge={largeSlots}
+                  isExpanded={streamAreaExpanded}
+                  layout={layout}
                   onSelect={() => {
                     setSelectedSlot(index);
                     if (
@@ -362,11 +387,12 @@ export default function StreamingMonitor() {
         </div>
 
         <div
-          className={`min-w-0 shrink-0 overflow-hidden transition-[max-width,opacity] duration-300 ease-in-out ${
+          className={`monitor-sidebar-slot ${
             showSidebar
-              ? "max-h-[2000px] w-full opacity-100 lg:max-h-none lg:w-60 xl:w-64"
-              : "max-h-0 w-full opacity-0 lg:max-h-none lg:w-0 lg:opacity-0"
+              ? "monitor-sidebar-slot--visible"
+              : "monitor-sidebar-slot--hidden"
           }`}
+          aria-hidden={!showSidebar}
         >
           {showSidebar && (
             <StreamerSidebar

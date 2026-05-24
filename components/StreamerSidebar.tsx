@@ -45,7 +45,7 @@ export default function StreamerSidebar({
   }, [filter, search, streamers]);
 
   return (
-    <aside className="flex w-full min-w-0 shrink-0 flex-col border border-white/10 bg-black/70 lg:w-60 xl:w-64">
+    <aside className="flex h-full w-full min-w-0 flex-col border border-white/10 bg-black/70">
       <div className="flex border-b border-white/10">
         <button
           type="button"
