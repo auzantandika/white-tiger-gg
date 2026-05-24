@@ -11,7 +11,10 @@ import {
   resizeAssignments,
   syncLiveAssignments,
 } from "@/lib/stream-layout";
-import { formatLastChecked } from "@/lib/stream-status";
+import {
+  formatLastChecked,
+  formatScanBatchMessage,
+} from "@/lib/stream-status";
 import type { GridLayout, LiveStreamer, YoutubeLiveResponse } from "@/lib/types";
 import LayoutButton from "./LayoutButton";
 import StreamerSidebar from "./StreamerSidebar";
@@ -36,6 +39,8 @@ export default function StreamingMonitor() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+  const [scannedCount, setScannedCount] = useState<number | null>(null);
+  const [scanBatchSize, setScanBatchSize] = useState(10);
 
   const [manuallyClearedIds, setManuallyClearedIds] = useState<Set<string>>(
     () => new Set(),
@@ -55,6 +60,8 @@ export default function StreamingMonitor() {
       const data = (await response.json()) as YoutubeLiveResponse;
       setStreamers(data.streamers);
       setLastCheckedAt(data.lastCheckedAt ?? null);
+      setScannedCount(data.scannedCount ?? null);
+      setScanBatchSize(data.scanBatchSize ?? 10);
       setError(null);
     } catch (err) {
       setError(
@@ -197,14 +204,25 @@ export default function StreamingMonitor() {
             {slotCount} active slots
           </p>
           {!loading && !error && (
-            <>
+            <div className="space-y-0.5">
               <p className="font-mono text-[10px] uppercase tracking-widest text-blue-400/70">
                 {liveCount} live now
               </p>
               <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
                 Last checked {formatLastChecked(lastCheckedAt)}
               </p>
-            </>
+              {scannedCount !== null && (
+                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                  {scannedCount} checked this cycle
+                </p>
+              )}
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-700">
+                {formatScanBatchMessage(scanBatchSize)}
+              </p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-700">
+                Full list may take several minutes to update.
+              </p>
+            </div>
           )}
         </div>
       </div>

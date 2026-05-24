@@ -1,5 +1,5 @@
 import { getStreamerInitial } from "@/lib/streamers";
-import { getStreamerStatusLabel } from "@/lib/stream-status";
+import { getStreamerStatusLabel, isApiLimitedError } from "@/lib/stream-status";
 import type { LiveStreamer } from "@/lib/types";
 
 interface StreamerListItemProps {
@@ -13,6 +13,7 @@ export default function StreamerListItem({
 }: StreamerListItemProps) {
   const isLive = streamer.status === "LIVE";
   const isUnknown = streamer.status === "UNKNOWN";
+  const isApiLimited = isUnknown && isApiLimitedError(streamer.errorMessage);
   const statusLabel = getStreamerStatusLabel(streamer);
 
   return (
@@ -35,9 +36,11 @@ export default function StreamerListItem({
           className={`font-mono text-[9px] uppercase tracking-widest ${
             isLive
               ? "text-blue-400"
-              : isUnknown
+              : isApiLimited
                 ? "text-amber-500/80"
-                : "text-zinc-600"
+                : isUnknown
+                  ? "text-zinc-500"
+                  : "text-zinc-600"
           }`}
         >
           {statusLabel}

@@ -65,6 +65,7 @@ export async function GET() {
       streamers,
       lastCheckedAt,
       scannedCount,
+      scanBatchSize: getScanBatchSize(),
     };
 
     return NextResponse.json(payload, {

@@ -1,5 +1,5 @@
 import type { LiveStreamer } from "@/lib/types";
-import { getStreamerStatusLabel } from "@/lib/stream-status";
+import { getStreamerStatusLabel, isApiLimitedError } from "@/lib/stream-status";
 
 interface StreamSlotProps {
   index: number;
@@ -28,6 +28,10 @@ export default function StreamSlot({
   const hasVideo = Boolean(streamer?.videoId);
   const hasChannel =
     Boolean(streamer?.channelUrl) && streamer?.channelUrl !== "#";
+  const unknownLabel =
+    streamer?.status === "UNKNOWN" ? getStreamerStatusLabel(streamer) : null;
+  const isApiLimited =
+    streamer?.status === "UNKNOWN" && isApiLimitedError(streamer.errorMessage);
 
   return (
     <div
@@ -95,18 +99,18 @@ export default function StreamSlot({
           <div className="flex flex-col items-center gap-3 px-4 text-center">
             <span
               className={`font-mono text-[10px] uppercase tracking-widest ${
-                streamer.status === "UNKNOWN"
-                  ? "text-amber-500/80"
-                  : "text-zinc-500"
+                isApiLimited ? "text-amber-500/80" : "text-zinc-500"
               }`}
             >
-              {streamer.status === "UNKNOWN"
-                ? getStreamerStatusLabel(streamer)
-                : streamer.status}
+              {unknownLabel ?? streamer.status}
             </span>
             <p className="text-sm font-semibold text-white">{streamer.name}</p>
             <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">
-              {streamer.status === "UNKNOWN" ? "Status pending scan" : "Stream offline"}
+              {streamer.status === "UNKNOWN"
+                ? isApiLimited
+                  ? "YouTube API quota reached"
+                  : "Waiting for next scan cycle"
+                : "Stream offline"}
             </p>
             {hasChannel && (
               <a

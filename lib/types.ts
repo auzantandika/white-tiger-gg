@@ -31,6 +31,7 @@ export interface YoutubeLiveResponse {
   streamers: LiveStreamer[];
   lastCheckedAt?: string;
   scannedCount?: number;
+  scanBatchSize?: number;
 }
 
 export interface Player {
