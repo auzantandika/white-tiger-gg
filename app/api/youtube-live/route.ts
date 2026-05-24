@@ -61,6 +61,7 @@ export async function GET() {
 
     const payload: YoutubeLiveResponse = {
       streamers,
+      totalChannels: STREAMER_CHANNELS.length,
       lastCheckedAt,
       scannedCount,
       scanBatchSize: getScanBatchSize(),
@@ -78,7 +79,10 @@ export async function GET() {
       return NextResponse.json(
         {
           streamers: cached,
+          totalChannels: STREAMER_CHANNELS.length,
           lastCheckedAt: new Date().toISOString(),
+          scannedCount: 0,
+          scanBatchSize: getScanBatchSize(),
         } satisfies YoutubeLiveResponse,
         {
           headers: {

@@ -1,11 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  getLiveStreamers,
-  getTaggedLiveStreamers,
-  type LiveFilterMode,
-} from "@/lib/stream-live-filter";
+import { getLiveStreamers } from "@/lib/stream-live-filter";
 import type { LiveStreamer, SidebarFilter } from "@/lib/types";
 import StreamerListItem from "./StreamerListItem";
 
@@ -13,7 +9,6 @@ interface StreamerSidebarProps {
   streamers: LiveStreamer[];
   loading: boolean;
   error: string | null;
-  liveFilterMode: LiveFilterMode;
   onAssignStreamer: (streamerId: string) => void;
   onRetry: () => void;
 }
@@ -22,28 +17,22 @@ export default function StreamerSidebar({
   streamers,
   loading,
   error,
-  liveFilterMode,
   onAssignStreamer,
   onRetry,
 }: StreamerSidebarProps) {
   const [filter, setFilter] = useState<SidebarFilter>("LIVE");
   const [search, setSearch] = useState("");
 
-  const liveCount = useMemo(() => {
-    if (liveFilterMode === "tagged-only") {
-      return getTaggedLiveStreamers(streamers).length;
-    }
-    return getLiveStreamers(streamers).length;
-  }, [streamers, liveFilterMode]);
+  const liveCount = useMemo(
+    () => getLiveStreamers(streamers).length,
+    [streamers],
+  );
 
   const filteredStreamers = useMemo(() => {
     let list = streamers;
 
     if (filter === "LIVE") {
-      list =
-        liveFilterMode === "tagged-only"
-          ? getTaggedLiveStreamers(streamers)
-          : getLiveStreamers(streamers);
+      list = getLiveStreamers(streamers);
     }
 
     const query = search.trim().toLowerCase();
@@ -54,7 +43,7 @@ export default function StreamerSidebar({
     }
 
     return list;
-  }, [filter, search, streamers, liveFilterMode]);
+  }, [filter, search, streamers]);
 
   return (
     <aside className="flex h-full w-full min-w-0 flex-col border border-white/10 bg-black/70">
