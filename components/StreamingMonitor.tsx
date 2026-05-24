@@ -316,7 +316,9 @@ export default function StreamingMonitor() {
   const liveCount = liveStreamers.length;
   const channelCount = totalChannels > 0 ? totalChannels : streamers.length;
 
-  const showScanning = !error && (loading || !hasFetchedOnce);
+  const showScanning =
+    !error &&
+    (loading || (streamers.length === 0 && !hasFetchedOnce));
   const showNoLive =
     !loading &&
     !error &&

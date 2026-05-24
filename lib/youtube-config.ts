@@ -4,8 +4,8 @@ export function getLiveCacheSeconds(): number {
 }
 
 export function getScanBatchSize(): number {
-  const parsed = Number.parseInt(process.env.YOUTUBE_SCAN_BATCH_SIZE ?? "47", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 47;
+  const parsed = Number.parseInt(process.env.YOUTUBE_SCAN_BATCH_SIZE ?? "51", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 51;
 }
 
 export function getLiveCacheControlHeader(): string {
