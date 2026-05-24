@@ -12,6 +12,7 @@ import {
   syncLiveAssignments,
 } from "@/lib/stream-layout";
 import type { GridLayout, LiveStreamer, YoutubeLiveResponse } from "@/lib/types";
+import FocusedStreamView from "./FocusedStreamView";
 import LayoutButton from "./LayoutButton";
 import StreamEmptyState from "./StreamEmptyState";
 import StreamRefreshBar from "./StreamRefreshBar";
@@ -28,6 +29,16 @@ function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
     .map((streamer) => streamer.id);
 }
 
+function isLargeLayout(layout: GridLayout, slotCount: number): boolean {
+  if (layout === "1x1") {
+    return true;
+  }
+  if (layout === "2x1" && slotCount <= 2) {
+    return true;
+  }
+  return false;
+}
+
 export default function StreamingMonitor() {
   const [hasUserSelectedLayout, setHasUserSelectedLayout] = useState(false);
   const [userLayout, setUserLayout] = useState<GridLayout>("ALL");
@@ -35,6 +46,7 @@ export default function StreamingMonitor() {
     (string | null)[] | null
   >(null);
   const [selectedSlot, setSelectedSlot] = useState(0);
+  const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
   const [streamers, setStreamers] = useState<LiveStreamer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +134,23 @@ export default function StreamingMonitor() {
     [streamers],
   );
 
+  const focusedStreamer = useMemo(() => {
+    if (!focusedStreamId) {
+      return null;
+    }
+    const streamer = streamerMap.get(focusedStreamId);
+    if (!streamer?.videoId) {
+      return null;
+    }
+    return streamer;
+  }, [focusedStreamId, streamerMap]);
+
+  useEffect(() => {
+    if (focusedStreamId && !focusedStreamer) {
+      setFocusedStreamId(null);
+    }
+  }, [focusedStreamId, focusedStreamer]);
+
   const gridCols = useMemo(() => {
     if (layout === "ALL") {
       return getAllLayoutCols(slotCount);
@@ -129,10 +158,13 @@ export default function StreamingMonitor() {
     return FIXED_LAYOUT_SLOTS[layout].cols;
   }, [layout, slotCount]);
 
+  const largeSlots = isLargeLayout(layout, slotCount);
+
   const handleLayoutChange = useCallback(
     (nextLayout: GridLayout) => {
       setHasUserSelectedLayout(true);
       setUserLayout(nextLayout);
+      setFocusedStreamId(null);
 
       const count = getSlotCountForLayout(nextLayout, liveIds);
 
@@ -175,6 +207,9 @@ export default function StreamingMonitor() {
 
       if (clearedId) {
         setManuallyClearedIds((prev) => new Set(prev).add(clearedId));
+        if (focusedStreamId === clearedId) {
+          setFocusedStreamId(null);
+        }
       }
 
       setAssignmentOverrides((current) => {
@@ -183,20 +218,28 @@ export default function StreamingMonitor() {
         return next;
       });
     },
-    [assignments, slotCount],
+    [assignments, slotCount, focusedStreamId],
   );
+
+  const handleFocusStream = useCallback((streamerId: string) => {
+    setFocusedStreamId(streamerId);
+  }, []);
+
+  const handleExitFocus = useCallback(() => {
+    setFocusedStreamId(null);
+  }, []);
 
   const liveCount = liveIds.length;
   const showScanning = loading && streamers.length === 0;
   const showNoLive = !loading && !error && liveCount === 0;
-  const showGrid = !showScanning && !showNoLive;
+  const showGrid = !showScanning && !showNoLive && !focusedStreamer;
 
   return (
     <section
       aria-label="Streaming monitor"
       className="monitor-panel flex min-w-0 flex-col overflow-hidden rounded border border-white/10 bg-black/80"
     >
-      <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+      <div className="px-2 pt-2 sm:px-3 sm:pt-3">
         <StreamingMonitorHeader
           liveCount={liveCount}
           totalChannels={streamers.length}
@@ -204,24 +247,26 @@ export default function StreamingMonitor() {
         />
       </div>
 
-      <div className="mt-3 flex min-w-0 items-center gap-2 border-y border-white/10 bg-black/50 px-2 py-2 sm:px-3">
-        <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-600 sm:inline">
-          Layout
-        </span>
-        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {LAYOUT_OPTIONS.map((option) => (
-            <LayoutButton
-              key={option}
-              layout={option}
-              active={layout === option}
-              onClick={() => handleLayoutChange(option)}
-            />
-          ))}
+      {!focusedStreamer && (
+        <div className="mt-2 flex min-w-0 items-center gap-2 border-y border-white/10 bg-black/50 px-2 py-1.5 sm:px-3">
+          <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-600 sm:inline">
+            Layout
+          </span>
+          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {LAYOUT_OPTIONS.map((option) => (
+              <LayoutButton
+                key={option}
+                layout={option}
+                active={layout === option}
+                onClick={() => handleLayoutChange(option)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {error && (
-        <div className="mx-3 mt-3 border border-blue-900/40 bg-blue-950/20 px-3 py-2 sm:mx-4">
+        <div className="mx-2 mt-2 border border-blue-900/40 bg-blue-950/20 px-3 py-2 sm:mx-3">
           <p className="font-mono text-[10px] uppercase tracking-widest text-blue-400">
             Live Status Error
           </p>
@@ -236,39 +281,60 @@ export default function StreamingMonitor() {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-col gap-3 p-3 sm:p-4 lg:flex-row">
+      <div className="flex min-w-0 flex-col gap-2 p-2 sm:gap-3 sm:p-3 lg:flex-row">
         <div className="min-w-0 flex-1">
           {showScanning && <StreamEmptyState variant="scanning" />}
           {showNoLive && <StreamEmptyState variant="no-live" />}
+          {focusedStreamer && (
+            <FocusedStreamView
+              streamer={focusedStreamer}
+              onBack={handleExitFocus}
+            />
+          )}
           {showGrid && (
-            <div className={`grid min-w-0 gap-1.5 sm:gap-2 ${gridCols}`}>
+            <div className={`grid min-w-0 gap-1 sm:gap-1.5 ${gridCols}`}>
               {assignments.map((streamerId, index) => (
                 <StreamSlot
                   key={`slot-${index}`}
-                  index={index}
                   streamer={
                     streamerId ? (streamerMap.get(streamerId) ?? null) : null
                   }
                   isSelected={selectedSlot === index}
-                  onSelect={() => setSelectedSlot(index)}
+                  isLarge={largeSlots}
+                  onSelect={() => {
+                    setSelectedSlot(index);
+                    if (
+                      streamerId &&
+                      streamerMap.get(streamerId)?.videoId
+                    ) {
+                      handleFocusStream(streamerId);
+                    }
+                  }}
                   onClear={() => handleClearSlot(index)}
+                  onFocus={
+                    streamerId
+                      ? () => handleFocusStream(streamerId)
+                      : undefined
+                  }
                 />
               ))}
             </div>
           )}
         </div>
 
-        <StreamerSidebar
-          streamers={streamers}
-          loading={loading}
-          error={error}
-          onAssignStreamer={handleAssignStreamer}
-          onRetry={() => fetchLiveStatus(true)}
-        />
+        {!focusedStreamer && (
+          <StreamerSidebar
+            streamers={streamers}
+            loading={loading}
+            error={error}
+            onAssignStreamer={handleAssignStreamer}
+            onRetry={() => fetchLiveStatus(true)}
+          />
+        )}
       </div>
 
       {!error && (
-        <div className="px-3 pb-3 sm:px-4 sm:pb-4">
+        <div className="px-2 pb-2 sm:px-3 sm:pb-3">
           <StreamRefreshBar
             lastCheckedAt={lastCheckedAt}
             scannedCount={scannedCount}

@@ -16,8 +16,8 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.08),transparent_55%)]" />
 
       <div
-        className={`relative mx-auto flex min-h-screen w-full max-w-[90rem] flex-col overflow-x-hidden px-3 pb-8 sm:px-6 sm:pb-10 lg:px-8 ${
-          isStreaming ? "pt-2" : "pt-2 sm:pb-12"
+        className={`relative mx-auto flex min-h-screen w-full max-w-[100rem] flex-col overflow-x-hidden px-2 pb-6 sm:px-4 sm:pb-8 lg:px-6 ${
+          isStreaming ? "pt-1" : "pt-2 sm:pb-12"
         }`}
       >
         {!isStreaming && <Header />}
@@ -45,7 +45,7 @@ export default function Home() {
         <main
           className={`min-w-0 flex-1 ${
             isStreaming
-              ? "mt-2"
+              ? "mt-1"
               : "portal-glow mt-4 rounded border border-white/10 bg-black/70 p-3 backdrop-blur-sm sm:mt-6 sm:p-6"
           }`}
         >

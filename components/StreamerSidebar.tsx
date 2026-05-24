@@ -45,7 +45,7 @@ export default function StreamerSidebar({
   }, [filter, search, streamers]);
 
   return (
-    <aside className="flex w-full min-w-0 shrink-0 flex-col border border-white/10 bg-black/70 lg:w-72 xl:w-80">
+    <aside className="flex w-full min-w-0 shrink-0 flex-col border border-white/10 bg-black/70 lg:w-60 xl:w-64">
       <div className="flex border-b border-white/10">
         <button
           type="button"
@@ -56,7 +56,7 @@ export default function StreamerSidebar({
               : "text-zinc-600 hover:text-zinc-400"
           }`}
         >
-          Live ({liveCount})
+          LIVE ({liveCount})
         </button>
         <button
           type="button"
@@ -67,7 +67,7 @@ export default function StreamerSidebar({
               : "text-zinc-600 hover:text-zinc-400"
           }`}
         >
-          Semua ({streamers.length})
+          ALL ({streamers.length})
         </button>
       </div>
 
@@ -76,17 +76,17 @@ export default function StreamerSidebar({
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Cari streamer..."
+          placeholder="Search streamers..."
           className="min-h-10 w-full border border-white/10 bg-zinc-950 px-3 py-2 font-mono text-xs text-white placeholder:text-zinc-600 focus:border-blue-700/50 focus:outline-none"
         />
       </div>
 
-      <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto p-2 sm:max-h-[400px] lg:max-h-none lg:flex-1">
+      <div className="flex max-h-[280px] flex-col gap-1 overflow-y-auto p-2 sm:max-h-[360px] lg:max-h-none lg:flex-1">
         {loading && streamers.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-8">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-800/30 border-t-blue-500" />
             <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-              Scanning...
+              Scanning channels...
             </p>
           </div>
         )}
@@ -111,7 +111,7 @@ export default function StreamerSidebar({
           filteredStreamers.length === 0 &&
           streamers.length > 0 && (
             <p className="py-8 text-center font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-              {"// Belum ada yang live"}
+              No one is live yet.
             </p>
           )}
 

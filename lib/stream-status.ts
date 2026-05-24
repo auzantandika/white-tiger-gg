@@ -26,14 +26,14 @@ export function getStreamerStatusLabel(streamer: LiveStreamer): string {
   }
 
   if (streamer.status === "OFFLINE") {
-    return "OFFLINE";
+    return "Offline";
   }
 
   if (isApiLimitedError(streamer.errorMessage)) {
-    return "API LIMITED";
+    return "API Limited";
   }
 
-  return "PENDING CHECK";
+  return "Pending Check";
 }
 
 export function formatLastChecked(timestamp: string | null | undefined): string {
