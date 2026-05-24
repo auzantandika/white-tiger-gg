@@ -268,7 +268,8 @@ export const STREAMER_CHANNELS: StreamerChannel[] = [
   {
     id: "pakdimm",
     name: "Pakdimm",
-    channelUrl: "https://www.youtube.com/@Pakdimm",
+    channelId: "UCyx0tvd5EwSkGpboI93rKrw",
+    channelUrl: "https://www.youtube.com/channel/UCyx0tvd5EwSkGpboI93rKrw",
   },
   {
     id: "poppy-capiii",
@@ -285,17 +286,20 @@ export const STREAMER_CHANNELS: StreamerChannel[] = [
   {
     id: "aang-mahesa",
     name: "Aang Mahesa",
-    channelUrl: "https://youtube.com/@aangmahesa047",
+    channelId: "UC2l5z9UELhkUww3SMy6eVVA",
+    channelUrl: "https://www.youtube.com/channel/UC2l5z9UELhkUww3SMy6eVVA",
   },
   {
     id: "ucup-pablo",
     name: "Ucup Pablo",
-    channelUrl: "https://youtube.com/@ucuppablo",
+    channelId: "UCgmD95O-VS3hwQM8qknGSFg",
+    channelUrl: "https://www.youtube.com/channel/UCgmD95O-VS3hwQM8qknGSFg",
   },
   {
     id: "mat4-ggg",
     name: "Mat4 GGG",
-    channelUrl: "https://www.youtube.com/@Mat4GGG",
+    channelId: "UC5YcvtNuGr1FEt-qRdNaY0A",
+    channelUrl: "https://www.youtube.com/channel/UC5YcvtNuGr1FEt-qRdNaY0A",
   },
 ];
 
