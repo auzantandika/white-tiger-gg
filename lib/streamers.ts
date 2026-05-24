@@ -298,7 +298,8 @@ export const STREAMER_CHANNELS: StreamerChannel[] = [
   {
     id: "aziel",
     name: "Aziel",
-    channelUrl: "https://youtube.com/@aziellinimah",
+    channelId: "UCrRX9aopK8I5lwsPkLWbWng",
+    channelUrl: "https://www.youtube.com/channel/UCrRX9aopK8I5lwsPkLWbWng",
   },
   {
     id: "asyraf",
