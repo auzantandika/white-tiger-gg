@@ -14,48 +14,39 @@ export const FIXED_LAYOUT_SLOTS: Record<
   { slots: number; cols: string }
 > = {
   "1x1": { slots: 1, cols: "grid-cols-1" },
-  "2x1": { slots: 2, cols: "grid-cols-1 sm:grid-cols-2" },
-  "2x2": { slots: 4, cols: "grid-cols-1 sm:grid-cols-2" },
-  "3x2": { slots: 6, cols: "grid-cols-2 lg:grid-cols-3" },
-  "4x2": { slots: 8, cols: "grid-cols-2 lg:grid-cols-4" },
+  "2x1": { slots: 2, cols: "grid-cols-1 md:grid-cols-2" },
+  "2x2": { slots: 4, cols: "grid-cols-1 md:grid-cols-2" },
+  "3x2": { slots: 6, cols: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" },
+  "4x2": { slots: 8, cols: "grid-cols-1 md:grid-cols-2 lg:grid-cols-4" },
 };
 
-export function getAllLayoutSlots(
-  streamerIdsWithVideo: string[],
-  totalStreamers: number,
-): number {
-  if (streamerIdsWithVideo.length > 0) {
-    return streamerIdsWithVideo.length;
-  }
-  return Math.max(totalStreamers, 1);
+export function getAllLayoutSlots(liveIds: string[]): number {
+  return Math.max(liveIds.length, 1);
 }
 
 export function getAllLayoutCols(slotCount: number): string {
   if (slotCount <= 1) return "grid-cols-1";
-  if (slotCount <= 2) return "grid-cols-1 sm:grid-cols-2";
-  if (slotCount <= 4) return "grid-cols-2";
-  if (slotCount <= 6) return "grid-cols-2 lg:grid-cols-3";
-  return "grid-cols-2 lg:grid-cols-4";
+  if (slotCount <= 2) return "grid-cols-1 md:grid-cols-2";
+  if (slotCount <= 4) return "grid-cols-1 md:grid-cols-2";
+  if (slotCount <= 6) return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+  return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 }
 
-export function suggestLayoutForLiveCount(
-  liveCount: number,
-): Exclude<GridLayout, "ALL"> {
-  if (liveCount <= 0) return "2x2";
-  if (liveCount === 1) return "1x1";
+export function suggestLayoutForLiveCount(liveCount: number): GridLayout {
+  if (liveCount <= 1) return "1x1";
   if (liveCount === 2) return "2x1";
-  if (liveCount === 4) return "2x2";
+  if (liveCount <= 4) return "2x2";
   if (liveCount <= 6) return "3x2";
-  return "4x2";
+  if (liveCount <= 8) return "4x2";
+  return "ALL";
 }
 
 export function getSlotCountForLayout(
   layout: GridLayout,
   liveIds: string[],
-  totalStreamers: number,
 ): number {
   if (layout === "ALL") {
-    return getAllLayoutSlots(liveIds, totalStreamers);
+    return getAllLayoutSlots(liveIds);
   }
   return FIXED_LAYOUT_SLOTS[layout].slots;
 }

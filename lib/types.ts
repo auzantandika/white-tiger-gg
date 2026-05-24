@@ -3,8 +3,9 @@ export type StreamStatus = "LIVE" | "OFFLINE";
 export interface StreamerChannel {
   id: string;
   name: string;
-  channelHandle: string;
   channelUrl: string;
+  channelHandle?: string;
+  channelId?: string;
 }
 
 export interface LiveStreamer {

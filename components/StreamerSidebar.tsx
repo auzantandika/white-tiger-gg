@@ -19,7 +19,7 @@ export default function StreamerSidebar({
   onAssignStreamer,
   onRetry,
 }: StreamerSidebarProps) {
-  const [filter, setFilter] = useState<SidebarFilter>("ALL");
+  const [filter, setFilter] = useState<SidebarFilter>("LIVE");
   const [search, setSearch] = useState("");
 
   const filteredStreamers = useMemo(() => {
@@ -40,14 +40,14 @@ export default function StreamerSidebar({
   }, [filter, search, streamers]);
 
   return (
-    <aside className="flex w-full shrink-0 flex-col border border-white/10 bg-black/60 lg:w-64 xl:w-72">
+    <aside className="flex w-full min-w-0 shrink-0 flex-col border border-white/10 bg-black/60 lg:w-64 xl:w-72">
       <div className="flex border-b border-white/5">
         {(["LIVE", "ALL"] as SidebarFilter[]).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setFilter(tab)}
-            className={`flex-1 px-3 py-2.5 font-mono text-[10px] uppercase tracking-widest transition-colors ${
+            className={`min-h-11 flex-1 px-3 py-3 font-mono text-[10px] uppercase tracking-widest transition-colors ${
               filter === tab
                 ? "border-b border-blue-500 bg-blue-950/20 text-blue-300"
                 : "text-zinc-600 hover:text-zinc-400"
@@ -64,11 +64,11 @@ export default function StreamerSidebar({
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search streamers..."
-          className="w-full border border-white/10 bg-zinc-950/80 px-2.5 py-2 font-mono text-xs text-white placeholder:text-zinc-600 focus:border-blue-800/50 focus:outline-none"
+          className="min-h-11 w-full border border-white/10 bg-zinc-950/80 px-3 py-2 font-mono text-xs text-white placeholder:text-zinc-600 focus:border-blue-800/50 focus:outline-none"
         />
       </div>
 
-      <div className="flex max-h-[420px] flex-col gap-1.5 overflow-y-auto p-2.5 lg:max-h-none lg:flex-1">
+      <div className="flex max-h-[360px] flex-col gap-1.5 overflow-y-auto p-2.5 sm:max-h-[420px] lg:max-h-none lg:flex-1">
         {loading && streamers.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-8">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-800/30 border-t-blue-500" />
@@ -86,7 +86,7 @@ export default function StreamerSidebar({
             <button
               type="button"
               onClick={onRetry}
-              className="mt-3 border border-blue-800/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-blue-300 transition-colors hover:bg-blue-950/40"
+              className="mt-3 min-h-10 border border-blue-800/40 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-blue-300 transition-colors hover:bg-blue-950/40"
             >
               Retry
             </button>

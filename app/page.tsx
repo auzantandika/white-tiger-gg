@@ -11,14 +11,14 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("streaming");
 
   return (
-    <div className="scanlines grid-bg relative min-h-screen">
+    <div className="scanlines grid-bg relative min-h-screen overflow-x-hidden">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.08),transparent_55%)]" />
 
-      <div className="relative mx-auto flex min-h-screen max-w-[90rem] flex-col px-4 pb-12 pt-2 sm:px-6 lg:px-8">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-[90rem] flex-col px-3 pb-10 pt-2 sm:px-6 sm:pb-12 lg:px-8">
         <Header />
 
         <nav
-          className="portal-glow mt-8 flex flex-wrap gap-2 rounded border border-white/10 bg-black/60 p-2 backdrop-blur-sm"
+          className="portal-glow mt-6 flex w-full gap-2 rounded border border-white/10 bg-black/60 p-2 backdrop-blur-sm sm:mt-8"
           aria-label="Portal sections"
         >
           <TabButton
@@ -35,11 +35,11 @@ export default function Home() {
           />
         </nav>
 
-        <main className="portal-glow mt-6 flex-1 rounded border border-white/10 bg-black/70 p-4 backdrop-blur-sm sm:p-6">
+        <main className="portal-glow mt-4 min-w-0 flex-1 rounded border border-white/10 bg-black/70 p-3 backdrop-blur-sm sm:mt-6 sm:p-6">
           {activeTab === "streaming" ? <StreamingTab /> : <PlayerFinderTab />}
         </main>
 
-        <footer className="mt-8 text-center">
+        <footer className="mt-6 text-center sm:mt-8">
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-zinc-700">
             White Tiger // Secure Operations Network
           </p>

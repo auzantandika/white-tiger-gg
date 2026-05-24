@@ -76,7 +76,21 @@ async function resolveChannelId(
   channel: StreamerChannel,
   apiKey: string,
 ): Promise<{ channelId: string | null; status: string; errorMessage?: string }> {
-  const forHandle = normalizeHandle(channel.channelHandle);
+  const directId = channel.channelId?.trim();
+  if (directId) {
+    return { channelId: directId, status: "direct" };
+  }
+
+  const handle = channel.channelHandle?.trim();
+  if (!handle) {
+    return {
+      channelId: null,
+      status: "not_found",
+      errorMessage: "No channel handle or channel ID configured",
+    };
+  }
+
+  const forHandle = normalizeHandle(handle);
   const url = buildApiUrl("/channels", { part: "id", forHandle }, apiKey);
 
   const response = await fetch(url, { next: { revalidate: 60 } });
@@ -96,7 +110,7 @@ async function resolveChannelId(
     return {
       channelId: null,
       status: "not_found",
-      errorMessage: `No YouTube channel found for handle ${channel.channelHandle}`,
+      errorMessage: `No YouTube channel found for handle ${handle}`,
     };
   }
 
@@ -159,7 +173,7 @@ export async function getChannelLiveStatus(
   apiKey: string,
 ): Promise<ChannelLiveResult> {
   const debug: StreamerLiveDebug = {
-    channelHandle: channel.channelHandle,
+    channelHandle: channel.channelHandle ?? channel.channelId ?? "",
     resolvedChannelId: "",
     resolveStatus: "pending",
     liveSearchStatus: "pending",

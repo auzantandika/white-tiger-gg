@@ -26,7 +26,8 @@ function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
 }
 
 export default function StreamingMonitor() {
-  const [userLayout, setUserLayout] = useState<GridLayout | null>(null);
+  const [hasUserSelectedLayout, setHasUserSelectedLayout] = useState(false);
+  const [userLayout, setUserLayout] = useState<GridLayout>("2x2");
   const [assignmentOverrides, setAssignmentOverrides] = useState<
     (string | null)[] | null
   >(null);
@@ -83,11 +84,13 @@ export default function StreamingMonitor() {
 
   const liveIds = useMemo(() => getLiveStreamerIds(streamers), [streamers]);
 
-  const layout = userLayout ?? suggestLayoutForLiveCount(liveIds.length);
+  const layout = hasUserSelectedLayout
+    ? userLayout
+    : suggestLayoutForLiveCount(liveIds.length);
 
   const slotCount = useMemo(
-    () => getSlotCountForLayout(layout, liveIds, streamers.length || 4),
-    [layout, liveIds, streamers.length],
+    () => getSlotCountForLayout(layout, liveIds),
+    [layout, liveIds],
   );
 
   const activeSkipIds = useMemo(() => {
@@ -98,8 +101,7 @@ export default function StreamingMonitor() {
   }, [manuallyClearedIds, liveIds]);
 
   const assignments = useMemo(() => {
-    const base =
-      assignmentOverrides ?? buildInitialAssignments(slotCount);
+    const base = assignmentOverrides ?? buildInitialAssignments(slotCount);
 
     return syncLiveAssignments(
       resizeAssignments(base, slotCount),
@@ -123,13 +125,10 @@ export default function StreamingMonitor() {
 
   const handleLayoutChange = useCallback(
     (nextLayout: GridLayout) => {
+      setHasUserSelectedLayout(true);
       setUserLayout(nextLayout);
 
-      const count = getSlotCountForLayout(
-        nextLayout,
-        liveIds,
-        streamers.length || 4,
-      );
+      const count = getSlotCountForLayout(nextLayout, liveIds);
 
       setAssignmentOverrides((current) =>
         syncLiveAssignments(
@@ -141,7 +140,7 @@ export default function StreamingMonitor() {
       );
       setSelectedSlot(0);
     },
-    [assignments, liveIds, streamers.length, activeSkipIds],
+    [assignments, liveIds, activeSkipIds],
   );
 
   const handleAssignStreamer = useCallback(
@@ -184,9 +183,9 @@ export default function StreamingMonitor() {
   const liveCount = liveIds.length;
 
   return (
-    <section aria-label="Streaming monitor" className="flex flex-col gap-3">
+    <section aria-label="Streaming monitor" className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-col gap-1 border-b border-white/5 pb-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h2 className="font-mono text-xs uppercase tracking-[0.25em] text-blue-400/70">
             {"// STREAM NETWORK"}
           </h2>
@@ -194,7 +193,7 @@ export default function StreamingMonitor() {
             Multi-stream live monitor
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-left sm:text-right">
           <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
             {slotCount} active slots
           </p>
@@ -215,30 +214,32 @@ export default function StreamingMonitor() {
           <button
             type="button"
             onClick={() => fetchLiveStatus(true)}
-            className="mt-2 border border-blue-800/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-blue-300 transition-colors hover:bg-blue-950/40"
+            className="mt-2 min-h-10 border border-blue-800/40 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-blue-300 transition-colors hover:bg-blue-950/40"
           >
             Retry
           </button>
         </div>
       )}
 
-      <div className="flex flex-col gap-4 lg:flex-row">
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row">
         <div className="min-w-0 flex-1">
-          <div className="mb-3 flex flex-wrap items-center gap-1.5 border border-white/10 bg-black/50 p-2">
-            <span className="mr-1 font-mono text-[9px] uppercase tracking-widest text-zinc-600">
+          <div className="mb-3 flex min-w-0 items-center gap-2 border border-white/10 bg-black/50 p-2">
+            <span className="shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-600">
               Layout
             </span>
-            {LAYOUT_OPTIONS.map((option) => (
-              <LayoutButton
-                key={option}
-                label={option}
-                active={layout === option}
-                onClick={() => handleLayoutChange(option)}
-              />
-            ))}
+            <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {LAYOUT_OPTIONS.map((option) => (
+                <LayoutButton
+                  key={option}
+                  label={option}
+                  active={layout === option}
+                  onClick={() => handleLayoutChange(option)}
+                />
+              ))}
+            </div>
           </div>
 
-          <div className={`grid gap-2 ${gridCols}`}>
+          <div className={`grid min-w-0 gap-2 ${gridCols}`}>
             {assignments.map((streamerId, index) => (
               <StreamSlot
                 key={`slot-${index}`}

@@ -39,7 +39,7 @@ export default function StreamSlot({
           onSelect();
         }
       }}
-      className={`relative flex aspect-video flex-col overflow-hidden border bg-black transition-all ${
+      className={`relative flex aspect-video w-full min-w-0 flex-col overflow-hidden border bg-black transition-all ${
         isSelected
           ? "border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.35)] ring-1 ring-blue-500/50"
           : hasVideo
@@ -58,7 +58,7 @@ export default function StreamSlot({
               event.stopPropagation();
               onClear();
             }}
-            className="shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-500 transition-colors hover:text-blue-400"
+            className="min-h-9 shrink-0 px-2 py-1 font-mono text-[9px] uppercase tracking-widest text-zinc-500 transition-colors hover:text-blue-400"
           >
             Clear
           </button>

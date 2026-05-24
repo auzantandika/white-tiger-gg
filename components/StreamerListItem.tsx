@@ -13,15 +13,15 @@ export default function StreamerListItem({
   const isLive = streamer.status === "LIVE";
 
   return (
-    <div className="flex items-center gap-2.5 border border-white/5 bg-zinc-950/60 px-2.5 py-2 transition-colors hover:border-blue-800/30 hover:bg-zinc-950">
+    <div className="flex min-w-0 items-center gap-2.5 border border-white/5 bg-zinc-950/60 px-2.5 py-2.5 transition-colors hover:border-blue-800/30 hover:bg-zinc-950">
       {streamer.thumbnail ? (
         <img
           src={streamer.thumbnail}
           alt=""
-          className="h-8 w-8 shrink-0 rounded-full border border-blue-800/40 object-cover"
+          className="h-9 w-9 shrink-0 rounded-full border border-blue-800/40 object-cover"
         />
       ) : (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-blue-800/40 bg-blue-950/40 font-mono text-xs font-semibold text-blue-300">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-blue-800/40 bg-blue-950/40 font-mono text-xs font-semibold text-blue-300">
           {getStreamerInitial(streamer.name)}
         </div>
       )}
@@ -41,7 +41,7 @@ export default function StreamerListItem({
         type="button"
         onClick={onAssign}
         aria-label={`Assign ${streamer.name} to selected slot`}
-        className="flex h-7 w-7 shrink-0 items-center justify-center border border-blue-700/40 bg-blue-950/30 font-mono text-xs text-blue-300 transition-colors hover:border-blue-500/60 hover:bg-blue-900/40"
+        className="flex h-9 w-9 shrink-0 items-center justify-center border border-blue-700/40 bg-blue-950/30 font-mono text-sm text-blue-300 transition-colors hover:border-blue-500/60 hover:bg-blue-900/40"
       >
         +
       </button>

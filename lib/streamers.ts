@@ -265,6 +265,24 @@ export const STREAMER_CHANNELS: StreamerChannel[] = [
     channelHandle: "@venesiavenee",
     channelUrl: "https://www.youtube.com/@venesiavenee",
   },
+  {
+    id: "pakdimm",
+    name: "Pakdimm",
+    channelHandle: "@Pakdimm",
+    channelUrl: "https://www.youtube.com/@Pakdimm",
+  },
+  {
+    id: "poppy-capiii",
+    name: "Poppy Capiii",
+    channelId: "UCMwQ7uTUXO5Q3P8nDYsoR8A",
+    channelUrl: "https://www.youtube.com/channel/UCMwQ7uTUXO5Q3P8nDYsoR8A",
+  },
+  {
+    id: "liyon",
+    name: "Liyon",
+    channelId: "UCuMuq1gINc_t-GfJtXXcyXw",
+    channelUrl: "https://www.youtube.com/channel/UCuMuq1gINc_t-GfJtXXcyXw",
+  },
 ];
 
 export function getStreamerInitial(name: string): string {

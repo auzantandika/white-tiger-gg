@@ -75,7 +75,7 @@ export default function PlayerFinderTab() {
         </div>
 
         {data && !loading && !error && (
-          <div className="rounded border border-white/10 bg-black/40 px-4 py-2 text-right">
+          <div className="w-full rounded border border-white/10 bg-black/40 px-4 py-2 sm:w-auto sm:text-right">
             <p className="truncate font-mono text-xs uppercase tracking-widest text-zinc-500">
               {data.hostname}
             </p>
@@ -101,7 +101,7 @@ export default function PlayerFinderTab() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search by player name or server ID..."
-          className="w-full rounded border border-white/10 bg-zinc-950/80 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 focus:border-blue-800/50 focus:outline-none focus:ring-1 focus:ring-blue-800/30"
+          className="min-h-11 w-full rounded border border-white/10 bg-zinc-950/80 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 focus:border-blue-800/50 focus:outline-none focus:ring-1 focus:ring-blue-800/30"
         />
       </div>
 
@@ -137,7 +137,7 @@ export default function PlayerFinderTab() {
               No online player found.
             </p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredPlayers.map((player) => (
                 <PlayerCard
                   key={player.id}
