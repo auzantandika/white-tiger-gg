@@ -1,9 +1,12 @@
+import { formatLastChecked } from "@/lib/stream-status";
 import Image from "next/image";
 
 interface StreamingMonitorHeaderProps {
   liveCount: number;
   totalChannels: number;
   refreshCountdown: number;
+  lastCheckedAt?: string | null;
+  scannedCount?: number | null;
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
   showSidebarToggle?: boolean;
@@ -38,6 +41,8 @@ export default function StreamingMonitorHeader({
   liveCount,
   totalChannels,
   refreshCountdown,
+  lastCheckedAt = null,
+  scannedCount = null,
   sidebarVisible,
   onToggleSidebar,
   showSidebarToggle = true,
@@ -86,6 +91,16 @@ export default function StreamingMonitorHeader({
           )}
         </div>
       </div>
+
+      <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-700 sm:text-right">
+        Last checked {formatLastChecked(lastCheckedAt)}
+        {scannedCount !== null && (
+          <span className="text-zinc-800">
+            {" · "}
+            {scannedCount} checked this cycle
+          </span>
+        )}
+      </p>
     </header>
   );
 }

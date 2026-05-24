@@ -15,7 +15,7 @@ import type { GridLayout, LiveStreamer, YoutubeLiveResponse } from "@/lib/types"
 import FocusedStreamView from "./FocusedStreamView";
 import LayoutButton from "./LayoutButton";
 import StreamEmptyState from "./StreamEmptyState";
-import StreamRefreshBar from "./StreamRefreshBar";
+import StreamingMonitorFooter from "./StreamingMonitorFooter";
 import StreamerSidebar from "./StreamerSidebar";
 import StreamingMonitorHeader from "./StreamingMonitorHeader";
 import StreamSlot from "./StreamSlot";
@@ -60,7 +60,6 @@ export default function StreamingMonitor() {
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [scannedCount, setScannedCount] = useState<number | null>(null);
-  const [scanBatchSize, setScanBatchSize] = useState(47);
 
   const [manuallyClearedIds, setManuallyClearedIds] = useState<Set<string>>(
     () => new Set(),
@@ -88,7 +87,6 @@ export default function StreamingMonitor() {
       setStreamers(data.streamers);
       setLastCheckedAt(data.lastCheckedAt ?? null);
       setScannedCount(data.scannedCount ?? null);
-      setScanBatchSize(data.scanBatchSize ?? 47);
       setError(null);
     } catch (err) {
       setError(
@@ -288,6 +286,8 @@ export default function StreamingMonitor() {
           liveCount={liveCount}
           totalChannels={streamers.length}
           refreshCountdown={refreshCountdown}
+          lastCheckedAt={lastCheckedAt}
+          scannedCount={scannedCount}
           sidebarVisible={sidebarVisible}
           onToggleSidebar={handleToggleSidebar}
         />
@@ -406,16 +406,7 @@ export default function StreamingMonitor() {
         </div>
       </div>
 
-      {!error && (
-        <div className="px-2 pb-2 sm:px-3 sm:pb-3">
-          <StreamRefreshBar
-            lastCheckedAt={lastCheckedAt}
-            scannedCount={scannedCount}
-            scanBatchSize={scanBatchSize}
-            refreshCountdown={refreshCountdown}
-          />
-        </div>
-      )}
+      <StreamingMonitorFooter />
     </section>
   );
 }
