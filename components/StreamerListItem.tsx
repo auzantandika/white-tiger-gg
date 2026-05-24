@@ -1,4 +1,5 @@
 import { getStreamerInitial } from "@/lib/streamers";
+import { isConfirmedLive } from "@/lib/stream-live-filter";
 import { getStreamerStatusLabel, isApiLimitedError } from "@/lib/stream-status";
 import type { LiveStreamer } from "@/lib/types";
 
@@ -11,8 +12,8 @@ export default function StreamerListItem({
   streamer,
   onAssign,
 }: StreamerListItemProps) {
-  const isLive = streamer.status === "LIVE";
-  const isUnknown = streamer.status === "UNKNOWN";
+  const isLive = isConfirmedLive(streamer);
+  const isUnknown = streamer.status === "UNKNOWN" && !isLive;
   const isApiLimited = isUnknown && isApiLimitedError(streamer.errorMessage);
   const statusLabel = getStreamerStatusLabel(streamer);
 

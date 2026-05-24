@@ -18,7 +18,11 @@ export function getQuotaSafetyLimit(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 7500;
 }
 
-export function getLiveCacheControlHeader(): string {
+export function getLiveCacheControlHeader(source?: "cache" | "vps"): string {
+  if (source === "vps") {
+    return "no-store";
+  }
+
   const seconds = getLiveCacheSeconds();
   return `public, s-maxage=${seconds}, stale-while-revalidate=${seconds * 2}`;
 }

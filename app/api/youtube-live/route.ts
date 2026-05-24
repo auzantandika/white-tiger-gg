@@ -6,10 +6,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const cacheControl = getLiveCacheControlHeader();
-
   try {
     const payload = await readYoutubeLiveResponse();
+    const cacheControl = getLiveCacheControlHeader(payload.source);
 
     return NextResponse.json(payload, {
       headers: {

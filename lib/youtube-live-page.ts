@@ -1,11 +1,21 @@
-const YOUTUBE_VIDEO_ID_PATTERN = /^[\w-]{11}$/;
+const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+const INVALID_VIDEO_ID_BLOCKLIST = new Set(["live_stream"]);
+
+export function isValidYouTubeVideoId(videoId: string): boolean {
+  if (!YOUTUBE_VIDEO_ID_PATTERN.test(videoId)) {
+    return false;
+  }
+
+  if (INVALID_VIDEO_ID_BLOCKLIST.has(videoId)) {
+    return false;
+  }
+
+  // Real YouTube IDs virtually always include at least one digit.
+  return /\d/.test(videoId);
+}
 
 const LIVE_PAGE_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
-
-export function isValidYouTubeVideoId(videoId: string): boolean {
-  return YOUTUBE_VIDEO_ID_PATTERN.test(videoId);
-}
 
 export function extractVideoIdsFromLivePage(
   html: string,
