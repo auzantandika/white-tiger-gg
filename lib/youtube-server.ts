@@ -2,16 +2,16 @@ import type { LiveStreamer, StreamerChannel } from "./types";
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 const REQUEST_CONCURRENCY = 4;
-const REQUEST_DELAY_MS = 200;
+const REQUEST_DELAY_MS = 150;
 
 interface YouTubeChannelResponse {
   items?: Array<{ id: string }>;
   error?: YouTubeApiErrorBody;
 }
 
-interface YouTubeSearchResponse {
+interface YouTubePlaylistItemsResponse {
   items?: Array<{
-    id?: { videoId?: string };
+    contentDetails?: { videoId?: string };
     snippet?: {
       title?: string;
       thumbnails?: {
@@ -53,8 +53,9 @@ export interface StreamerLiveDebug {
   channelId: string;
   resolvedChannelId: string;
   resolveStatus: string;
-  primaryLiveSearchStatus: string;
-  fallbackSearchStatus: string;
+  uploadsPlaylistId: string;
+  playlistItemsStatus: string;
+  videosListStatus: string;
   videoCheckedCount: number;
   errorMessage?: string;
 }
@@ -102,6 +103,14 @@ export function isFallbackEnabled(): boolean {
   return process.env.YOUTUBE_ENABLE_FALLBACK === "true";
 }
 
+export function getUploadsPlaylistId(channelId: string): string | null {
+  if (!channelId.startsWith("UC")) {
+    return null;
+  }
+
+  return `UU${channelId.slice(2)}`;
+}
+
 function thumbnailFromSnippet(snippet?: {
   thumbnails?: {
     medium?: { url?: string };
@@ -140,6 +149,21 @@ function unknownStreamer(
     title: "",
     thumbnail: "",
     ...(errorMessage ? { errorMessage } : {}),
+  };
+}
+
+function liveStreamer(
+  channel: StreamerChannel,
+  live: { videoId: string; title: string; thumbnail: string },
+): LiveStreamer {
+  return {
+    id: channel.id,
+    name: channel.name,
+    channelUrl: channel.channelUrl,
+    status: "LIVE",
+    videoId: live.videoId,
+    title: live.title,
+    thumbnail: live.thumbnail,
   };
 }
 
@@ -263,54 +287,6 @@ export async function resolveStreamerChannel(
   };
 }
 
-async function fetchPrimaryLiveVideo(
-  channelId: string,
-  apiKey: string,
-): Promise<{
-  live: { videoId: string; title: string; thumbnail: string } | null;
-  status: string;
-  errorMessage?: string;
-}> {
-  const url = buildApiUrl(
-    "/search",
-    {
-      part: "snippet",
-      channelId,
-      eventType: "live",
-      type: "video",
-      maxResults: "1",
-    },
-    apiKey,
-  );
-
-  const response = await fetch(url, { cache: "no-store" });
-  const body = (await response.json()) as YouTubeSearchResponse;
-
-  if (!response.ok) {
-    return {
-      live: null,
-      status: "error",
-      errorMessage: parseYouTubeError(body.error ?? body, response.status),
-    };
-  }
-
-  const item = body.items?.[0];
-  const videoId = item?.id?.videoId;
-
-  if (!videoId) {
-    return { live: null, status: "offline" };
-  }
-
-  return {
-    live: {
-      videoId,
-      title: item.snippet?.title ?? "",
-      thumbnail: thumbnailFromSnippet(item.snippet),
-    },
-    status: "live",
-  };
-}
-
 function isVideoLive(item: NonNullable<YouTubeVideosResponse["items"]>[number]): boolean {
   if (item.snippet?.liveBroadcastContent === "live") {
     return true;
@@ -320,46 +296,67 @@ function isVideoLive(item: NonNullable<YouTubeVideosResponse["items"]>[number]):
   return Boolean(details?.actualStartTime && !details?.actualEndTime);
 }
 
-async function fetchFallbackLiveVideo(
+async function fetchLiveViaUploadsPlaylist(
   channelId: string,
   apiKey: string,
 ): Promise<{
   live: { videoId: string; title: string; thumbnail: string } | null;
-  status: string;
+  uploadsPlaylistId: string | null;
+  playlistItemsStatus: string;
+  videosListStatus: string;
   videoCheckedCount: number;
   errorMessage?: string;
 }> {
-  const searchUrl = buildApiUrl(
-    "/search",
+  const uploadsPlaylistId = getUploadsPlaylistId(channelId);
+
+  if (!uploadsPlaylistId) {
+    return {
+      live: null,
+      uploadsPlaylistId: null,
+      playlistItemsStatus: "invalid_channel_id",
+      videosListStatus: "skipped",
+      videoCheckedCount: 0,
+      errorMessage: "Invalid channel ID format",
+    };
+  }
+
+  const playlistUrl = buildApiUrl(
+    "/playlistItems",
     {
-      part: "snippet",
-      channelId,
-      type: "video",
-      order: "date",
-      maxResults: "5",
+      part: "snippet,contentDetails",
+      playlistId: uploadsPlaylistId,
+      maxResults: "3",
     },
     apiKey,
   );
 
-  const searchResponse = await fetch(searchUrl, { cache: "no-store" });
-  const searchBody = (await searchResponse.json()) as YouTubeSearchResponse;
+  const playlistResponse = await fetch(playlistUrl, { cache: "no-store" });
+  const playlistBody = (await playlistResponse.json()) as YouTubePlaylistItemsResponse;
 
-  if (!searchResponse.ok) {
+  if (!playlistResponse.ok) {
     return {
       live: null,
-      status: "error",
+      uploadsPlaylistId,
+      playlistItemsStatus: "error",
+      videosListStatus: "skipped",
       videoCheckedCount: 0,
-      errorMessage: parseYouTubeError(searchBody.error ?? searchBody, searchResponse.status),
+      errorMessage: parseYouTubeError(playlistBody.error ?? playlistBody, playlistResponse.status),
     };
   }
 
   const videoIds =
-    searchBody.items
-      ?.map((item) => item.id?.videoId)
+    playlistBody.items
+      ?.map((item) => item.contentDetails?.videoId)
       .filter((id): id is string => Boolean(id)) ?? [];
 
   if (videoIds.length === 0) {
-    return { live: null, status: "offline", videoCheckedCount: 0 };
+    return {
+      live: null,
+      uploadsPlaylistId,
+      playlistItemsStatus: "empty",
+      videosListStatus: "skipped",
+      videoCheckedCount: 0,
+    };
   }
 
   const videosUrl = buildApiUrl(
@@ -377,7 +374,9 @@ async function fetchFallbackLiveVideo(
   if (!videosResponse.ok) {
     return {
       live: null,
-      status: "error",
+      uploadsPlaylistId,
+      playlistItemsStatus: "ok",
+      videosListStatus: "error",
       videoCheckedCount: videoIds.length,
       errorMessage: parseYouTubeError(videosBody.error ?? videosBody, videosResponse.status),
     };
@@ -391,20 +390,28 @@ async function fetchFallbackLiveVideo(
           title: item.snippet?.title ?? "",
           thumbnail: thumbnailFromSnippet(item.snippet),
         },
-        status: "live",
+        uploadsPlaylistId,
+        playlistItemsStatus: "ok",
+        videosListStatus: "live",
         videoCheckedCount: videoIds.length,
       };
     }
   }
 
-  return { live: null, status: "offline", videoCheckedCount: videoIds.length };
+  return {
+    live: null,
+    uploadsPlaylistId,
+    playlistItemsStatus: "ok",
+    videosListStatus: "offline",
+    videoCheckedCount: videoIds.length,
+  };
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function processWithConcurrency<T, R>(
+export async function processWithConcurrency<T, R>(
   items: T[],
   limit: number,
   worker: (item: T) => Promise<R>,
@@ -432,23 +439,26 @@ async function processWithConcurrency<T, R>(
   return results;
 }
 
+function createInitialDebug(channel: StreamerChannel): StreamerLiveDebug {
+  return {
+    channelHandle: channel.channelHandle ?? extractHandleFromUrl(channel.channelUrl) ?? "",
+    channelId: channel.channelId ?? extractChannelIdFromUrl(channel.channelUrl) ?? "",
+    resolvedChannelId: "",
+    resolveStatus: "pending",
+    uploadsPlaylistId: "",
+    playlistItemsStatus: "pending",
+    videosListStatus: "skipped",
+    videoCheckedCount: 0,
+  };
+}
+
 export async function getChannelLiveStatus(
   channel: StreamerChannel,
   apiKey: string,
   options: LiveDetectionOptions = {},
 ): Promise<ChannelLiveResult> {
-  const enableFallback = options.enableFallback ?? isFallbackEnabled();
   const resolveHandles = options.resolveHandles ?? true;
-
-  const debug: StreamerLiveDebug = {
-    channelHandle: channel.channelHandle ?? extractHandleFromUrl(channel.channelUrl) ?? "",
-    channelId: channel.channelId ?? extractChannelIdFromUrl(channel.channelUrl) ?? "",
-    resolvedChannelId: "",
-    resolveStatus: "pending",
-    primaryLiveSearchStatus: "pending",
-    fallbackSearchStatus: "skipped",
-    videoCheckedCount: 0,
-  };
+  const debug = createInitialDebug(channel);
 
   try {
     let resolvedChannelId: string | null = null;
@@ -472,7 +482,7 @@ export async function getChannelLiveStatus(
 
       if (!resolvedChannelId) {
         debug.errorMessage = "Missing channelId";
-        debug.primaryLiveSearchStatus = "skipped";
+        debug.playlistItemsStatus = "skipped";
         return {
           streamer: unknownStreamer(channel, "Missing channelId"),
           debug,
@@ -481,77 +491,39 @@ export async function getChannelLiveStatus(
     }
 
     if (!resolvedChannelId) {
-      debug.primaryLiveSearchStatus = "skipped";
+      debug.playlistItemsStatus = "skipped";
       if (isQuotaExceededError(debug.errorMessage)) {
         return { streamer: unknownStreamer(channel, debug.errorMessage), debug };
       }
       return { streamer: offlineStreamer(channel), debug };
     }
 
-    const primaryResult = await fetchPrimaryLiveVideo(resolvedChannelId, apiKey);
-    debug.primaryLiveSearchStatus = primaryResult.status;
+    const liveResult = await fetchLiveViaUploadsPlaylist(resolvedChannelId, apiKey);
+    debug.uploadsPlaylistId = liveResult.uploadsPlaylistId ?? "";
+    debug.playlistItemsStatus = liveResult.playlistItemsStatus;
+    debug.videosListStatus = liveResult.videosListStatus;
+    debug.videoCheckedCount = liveResult.videoCheckedCount;
 
-    if (primaryResult.errorMessage) {
-      debug.errorMessage = primaryResult.errorMessage;
-      if (isQuotaExceededError(primaryResult.errorMessage)) {
-        return { streamer: unknownStreamer(channel, primaryResult.errorMessage), debug };
+    if (liveResult.errorMessage) {
+      debug.errorMessage = liveResult.errorMessage;
+      if (isQuotaExceededError(liveResult.errorMessage)) {
+        return { streamer: unknownStreamer(channel, liveResult.errorMessage), debug };
       }
       return { streamer: offlineStreamer(channel), debug };
     }
 
-    if (primaryResult.live) {
+    if (liveResult.live) {
       return {
-        streamer: {
-          id: channel.id,
-          name: channel.name,
-          channelUrl: channel.channelUrl,
-          status: "LIVE",
-          videoId: primaryResult.live.videoId,
-          title: primaryResult.live.title,
-          thumbnail: primaryResult.live.thumbnail,
-        },
+        streamer: liveStreamer(channel, liveResult.live),
         debug,
       };
     }
 
-    if (!enableFallback) {
-      return { streamer: offlineStreamer(channel), debug };
-    }
-
-    const fallbackResult = await fetchFallbackLiveVideo(resolvedChannelId, apiKey);
-    debug.fallbackSearchStatus = fallbackResult.status;
-    debug.videoCheckedCount = fallbackResult.videoCheckedCount;
-
-    if (fallbackResult.errorMessage) {
-      debug.errorMessage = fallbackResult.errorMessage;
-      if (isQuotaExceededError(fallbackResult.errorMessage)) {
-        return { streamer: unknownStreamer(channel, fallbackResult.errorMessage), debug };
-      }
-      return { streamer: offlineStreamer(channel), debug };
-    }
-
-    if (!fallbackResult.live) {
-      return { streamer: offlineStreamer(channel), debug };
-    }
-
-    return {
-      streamer: {
-        id: channel.id,
-        name: channel.name,
-        channelUrl: channel.channelUrl,
-        status: "LIVE",
-        videoId: fallbackResult.live.videoId,
-        title: fallbackResult.live.title,
-        thumbnail: fallbackResult.live.thumbnail,
-      },
-      debug,
-    };
+    return { streamer: offlineStreamer(channel), debug };
   } catch {
     debug.resolveStatus = debug.resolveStatus === "pending" ? "error" : debug.resolveStatus;
-    debug.primaryLiveSearchStatus =
-      debug.primaryLiveSearchStatus === "pending" ? "error" : debug.primaryLiveSearchStatus;
-    debug.fallbackSearchStatus =
-      debug.fallbackSearchStatus === "pending" ? "error" : debug.fallbackSearchStatus;
+    debug.playlistItemsStatus =
+      debug.playlistItemsStatus === "pending" ? "error" : debug.playlistItemsStatus;
     debug.errorMessage = "Unexpected error while checking YouTube live status";
 
     return { streamer: unknownStreamer(channel, debug.errorMessage), debug };
@@ -588,8 +560,9 @@ export function attachDebugFields(
     channelId: debug.channelId,
     resolvedChannelId: debug.resolvedChannelId,
     resolveStatus: debug.resolveStatus,
-    primaryLiveSearchStatus: debug.primaryLiveSearchStatus,
-    fallbackSearchStatus: debug.fallbackSearchStatus,
+    uploadsPlaylistId: debug.uploadsPlaylistId,
+    playlistItemsStatus: debug.playlistItemsStatus,
+    videosListStatus: debug.videosListStatus,
     videoCheckedCount: debug.videoCheckedCount,
     ...(debug.errorMessage ? { errorMessage: debug.errorMessage } : {}),
   };

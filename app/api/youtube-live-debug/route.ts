@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { STREAMER_CHANNELS } from "@/lib/streamers";
-import {
-  attachDebugFields,
-  getAllChannelsLiveStatus,
-  isFallbackEnabled,
-} from "@/lib/youtube-server";
+import { getMergedStreamers } from "@/lib/youtube-live-cache";
+import { attachDebugFields } from "@/lib/youtube-server";
+import { runRotatingLiveScan } from "@/lib/youtube-live-scan";
+import { getScanBatchSize } from "@/lib/youtube-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,19 +27,26 @@ export async function GET() {
   }
 
   try {
-    const results = await getAllChannelsLiveStatus(STREAMER_CHANNELS, apiKey, {
-      enableFallback: isFallbackEnabled(),
-      resolveHandles: true,
-    });
-
-    const streamers = results.map(({ streamer, debug }) =>
-      attachDebugFields(streamer, debug, true),
+    const { results, scannedCount } = await runRotatingLiveScan(
+      STREAMER_CHANNELS,
+      apiKey,
+      { batchSize: getScanBatchSize(), resolveHandles: true },
     );
+
+    const debugById = new Map(
+      results.map(({ streamer, debug }) => [streamer.id, debug]),
+    );
+
+    const streamers = getMergedStreamers(STREAMER_CHANNELS).map((streamer) => {
+      const debug = debugById.get(streamer.id);
+      return debug ? attachDebugFields(streamer, debug, true) : streamer;
+    });
 
     return NextResponse.json(
       {
         warning:
-          "Debug endpoint uses more quota. Do not refresh repeatedly.",
+          "Debug endpoint uses YouTube API quota. Do not refresh repeatedly.",
+        scannedCount,
         streamers,
       },
       {

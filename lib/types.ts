@@ -20,8 +20,9 @@ export interface LiveStreamer {
   channelId?: string;
   resolvedChannelId?: string;
   resolveStatus?: string;
-  primaryLiveSearchStatus?: string;
-  fallbackSearchStatus?: string;
+  uploadsPlaylistId?: string;
+  playlistItemsStatus?: string;
+  videosListStatus?: string;
   videoCheckedCount?: number;
   errorMessage?: string;
   lastCheckedAt?: string;

@@ -9,13 +9,20 @@ import {
 import { getScanBatchSize } from "./youtube-config";
 import {
   getChannelLiveStatus,
+  processWithConcurrency,
   type ChannelLiveResult,
 } from "./youtube-server";
+
+const SCAN_CONCURRENCY = 4;
 
 export function selectScanBatch(
   channels: StreamerChannel[],
   batchSize: number,
 ): { toScan: StreamerChannel[]; nextCursor: number } {
+  if (batchSize >= channels.length) {
+    return { toScan: channels, nextCursor: 0 };
+  }
+
   ensureScanCache(channels);
 
   const streamersById = getCachedStreamerMap();
@@ -69,25 +76,23 @@ export function selectScanBatch(
 export async function runRotatingLiveScan(
   channels: StreamerChannel[],
   apiKey: string,
-  options: { enableFallback?: boolean; batchSize?: number } = {},
+  options: { batchSize?: number; resolveHandles?: boolean } = {},
 ): Promise<{ results: ChannelLiveResult[]; scannedCount: number }> {
   const batchSize = options.batchSize ?? getScanBatchSize();
+  const resolveHandles = options.resolveHandles ?? false;
   const { toScan, nextCursor } = selectScanBatch(channels, batchSize);
 
-  const results: ChannelLiveResult[] = [];
+  const rawResults = await processWithConcurrency(toScan, SCAN_CONCURRENCY, (channel) =>
+    getChannelLiveStatus(channel, apiKey, {
+      resolveHandles,
+    }),
+  );
 
-  for (const channel of toScan) {
-    const result = await getChannelLiveStatus(channel, apiKey, {
-      enableFallback: options.enableFallback ?? false,
-      resolveHandles: false,
-    });
-
-    const checkedAt = new Date().toISOString();
-    results.push({
-      streamer: { ...result.streamer, lastCheckedAt: checkedAt },
-      debug: result.debug,
-    });
-  }
+  const checkedAt = new Date().toISOString();
+  const results = rawResults.map((result) => ({
+    streamer: { ...result.streamer, lastCheckedAt: checkedAt },
+    debug: result.debug,
+  }));
 
   updateCachedStreamers(results.map(({ streamer }) => streamer));
   setScanCursor(nextCursor);

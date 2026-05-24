@@ -40,7 +40,7 @@ export default function StreamingMonitor() {
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [scannedCount, setScannedCount] = useState<number | null>(null);
-  const [scanBatchSize, setScanBatchSize] = useState(10);
+  const [scanBatchSize, setScanBatchSize] = useState(47);
 
   const [manuallyClearedIds, setManuallyClearedIds] = useState<Set<string>>(
     () => new Set(),
@@ -61,7 +61,7 @@ export default function StreamingMonitor() {
       setStreamers(data.streamers);
       setLastCheckedAt(data.lastCheckedAt ?? null);
       setScannedCount(data.scannedCount ?? null);
-      setScanBatchSize(data.scanBatchSize ?? 10);
+      setScanBatchSize(data.scanBatchSize ?? 47);
       setError(null);
     } catch (err) {
       setError(

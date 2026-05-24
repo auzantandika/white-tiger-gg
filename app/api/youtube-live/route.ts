@@ -14,7 +14,6 @@ import {
 } from "@/lib/youtube-config";
 import {
   attachDebugFields,
-  isFallbackEnabled,
   isQuotaExceededError,
 } from "@/lib/youtube-server";
 
@@ -41,7 +40,6 @@ export async function GET() {
       STREAMER_CHANNELS,
       apiKey,
       {
-        enableFallback: isFallbackEnabled(),
         batchSize: getScanBatchSize(),
       },
     );
