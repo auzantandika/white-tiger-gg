@@ -2,8 +2,24 @@ import type { LiveStreamer, YoutubeLiveResponse } from "./types";
 
 export const DEFAULT_SCAN_BATCH_SIZE = 51;
 
+export function hasChannelOwnershipMatch(streamer: LiveStreamer): boolean {
+  if (streamer.channelOwnershipMatch === false) {
+    return false;
+  }
+
+  if (streamer.detectedVideoChannelId && streamer.expectedChannelId) {
+    return streamer.detectedVideoChannelId === streamer.expectedChannelId;
+  }
+
+  return true;
+}
+
 export function isConfirmedLive(streamer: LiveStreamer): boolean {
-  return streamer.status === "LIVE" && Boolean(streamer.videoId);
+  return (
+    streamer.status === "LIVE" &&
+    Boolean(streamer.videoId) &&
+    hasChannelOwnershipMatch(streamer)
+  );
 }
 
 export function getLiveStreamers(streamers: LiveStreamer[]): LiveStreamer[] {

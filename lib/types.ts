@@ -23,6 +23,11 @@ export interface LiveStreamer {
   livePageStatus?: string;
   livePageVideoId?: string;
   livePageVerifyStatus?: string;
+  detectedVideoId?: string;
+  detectedVideoChannelId?: string;
+  detectedVideoChannelTitle?: string;
+  expectedChannelId?: string;
+  channelOwnershipMatch?: boolean;
   uploadsPlaylistId?: string;
   playlistItemsStatus?: string;
   videosListStatus?: string;

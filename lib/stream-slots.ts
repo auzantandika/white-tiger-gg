@@ -1,4 +1,4 @@
-import { isConfirmedLive } from "@/lib/stream-live-filter";
+import { hasChannelOwnershipMatch, isConfirmedLive } from "@/lib/stream-live-filter";
 import type { LiveStreamer } from "@/lib/types";
 
 export interface StreamSlotAssignment {
@@ -135,7 +135,7 @@ export function resolveSlotForDisplay(
   }
 
   const streamer = streamerMap.get(slot.streamerId);
-  if (!streamer || !isConfirmedLive(streamer)) {
+  if (!streamer || !isConfirmedLive(streamer) || !hasChannelOwnershipMatch(streamer)) {
     return null;
   }
 
@@ -200,6 +200,18 @@ export function validateSlotAssignments(
           streamerId: slot.streamerId,
           slotVideoId: slot.videoId,
           liveVideoId: streamer.videoId,
+        },
+      );
+    }
+
+    if (!hasChannelOwnershipMatch(streamer)) {
+      console.warn(
+        "[StreamingMonitor] Streamer failed channel ownership validation",
+        {
+          slotIndex: index,
+          streamerId: slot.streamerId,
+          detectedVideoChannelId: streamer.detectedVideoChannelId,
+          expectedChannelId: streamer.expectedChannelId,
         },
       );
     }
