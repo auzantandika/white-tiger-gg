@@ -41,8 +41,10 @@ export interface LiveStreamer {
 
 export interface YoutubeLiveResponse {
   streamers: LiveStreamer[];
+  liveCount?: number;
   totalChannels?: number;
   lastCheckedAt?: string | null;
+  nextScanAt?: string | null;
   scannedCount?: number;
   scanBatchSize?: number;
   recheckedLiveCount?: number;
@@ -52,9 +54,12 @@ export interface YoutubeLiveResponse {
   message?: string;
   cacheStale?: boolean;
   cacheSeconds?: number;
+  cacheAgeSeconds?: number | null;
   source?: "cache";
   storeProvider?: string;
   quotaUsedEstimate?: number;
+  dailyQuotaBudget?: number;
+  quotaSafetyLimit?: number;
 }
 
 export interface Player {

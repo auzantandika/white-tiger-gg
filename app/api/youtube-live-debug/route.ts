@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readCachedYoutubeLiveResponse } from "@/lib/youtube-live-read";
-import { readYoutubeLiveSnapshot } from "@/lib/youtube-live-store";
+import { getCachedLiveData, getCachedLiveDataAge } from "@/lib/youtube-live-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   try {
-    const snapshot = await readYoutubeLiveSnapshot();
+    const snapshot = await getCachedLiveData();
+    const cacheAgeSeconds = await getCachedLiveDataAge();
     const payload = await readCachedYoutubeLiveResponse();
 
     return NextResponse.json(
@@ -19,6 +20,7 @@ export async function GET() {
         warning:
           "Debug endpoint reads cached data only. Scans run via /api/cron/scan-youtube-live.",
         storeProvider: snapshot ? payload.storeProvider : "none",
+        liveCount: payload.liveCount,
         scannedCount: payload.scannedCount,
         recheckedLiveCount: payload.recheckedLiveCount,
         scanBatchSize: payload.scanBatchSize,
@@ -26,8 +28,12 @@ export async function GET() {
         scannedStreamerIds: payload.scannedStreamerIds,
         skippedStreamerIds: payload.skippedStreamerIds,
         lastCheckedAt: payload.lastCheckedAt,
+        nextScanAt: payload.nextScanAt,
         cacheStale: payload.cacheStale,
+        cacheAgeSeconds,
         scanCursor: snapshot?.scanCursor ?? 0,
+        dailyQuotaBudget: snapshot?.dailyQuotaBudget,
+        quotaSafetyLimit: snapshot?.quotaSafetyLimit,
         streamers: payload.streamers,
       },
       {

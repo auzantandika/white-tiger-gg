@@ -39,6 +39,8 @@ export async function GET(request: Request) {
         livePrioritized: scan.livePrioritized,
         scannedStreamerIds: scan.scannedStreamerIds,
         skippedStreamerIds: scan.skippedStreamerIds,
+        liveCount: scan.snapshot.liveCount,
+        nextScanAt: scan.snapshot.nextScanAt,
         lastCheckedAt: scan.snapshot.lastCheckedAt,
         scanCursor: scan.snapshot.scanCursor,
         totalChannels: scan.snapshot.totalChannels,

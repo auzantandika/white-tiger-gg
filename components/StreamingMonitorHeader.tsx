@@ -6,11 +6,11 @@ interface StreamingMonitorHeaderProps {
   totalChannels: number;
   refreshCountdown: number;
   lastCheckedAt?: string | null;
+  nextScanAt?: string | null;
   scannedCount?: number | null;
   recheckedLiveCount?: number | null;
   livePrioritized?: boolean;
   cacheStale?: boolean;
-  cacheSeconds?: number | null;
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
   showSidebarToggle?: boolean;
@@ -46,11 +46,11 @@ export default function StreamingMonitorHeader({
   totalChannels,
   refreshCountdown,
   lastCheckedAt = null,
+  nextScanAt = null,
   scannedCount = null,
   recheckedLiveCount = null,
   livePrioritized = false,
   cacheStale = false,
-  cacheSeconds = null,
   sidebarVisible,
   onToggleSidebar,
   showSidebarToggle = true,
@@ -102,31 +102,28 @@ export default function StreamingMonitorHeader({
 
       <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-700 sm:text-right">
         Last checked {formatLastChecked(lastCheckedAt)}
-        {scannedCount !== null && (
+        {nextScanAt && (
+          <span className="text-zinc-800">
+            {" · "}
+            next scan {formatLastChecked(nextScanAt)}
+          </span>
+        )}
+        {scannedCount !== null && scannedCount > 0 && (
           <span className="text-zinc-800">
             {" · "}
             {scannedCount} checked this cycle
           </span>
         )}
-        {livePrioritized && (
+        {livePrioritized && recheckedLiveCount !== null && recheckedLiveCount > 0 && (
           <span className="text-zinc-800">
             {" · "}
-            live streams rechecked every cycle
-            {recheckedLiveCount !== null && recheckedLiveCount > 0
-              ? ` (${recheckedLiveCount})`
-              : ""}
+            {recheckedLiveCount} live rechecked
           </span>
         )}
-        {cacheStale && (
-          <span className="text-amber-900/80">
+        {lastCheckedAt && (
+          <span className={cacheStale ? "text-amber-900/80" : "text-zinc-800"}>
             {" · "}
-            live data may be delayed
-          </span>
-        )}
-        {cacheSeconds !== null && cacheSeconds > 0 && (
-          <span className="text-zinc-800">
-            {" · "}
-            next scan ~{Math.round(cacheSeconds / 60)}m
+            live data may be delayed up to 10 minutes
           </span>
         )}
       </p>

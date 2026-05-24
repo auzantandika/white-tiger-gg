@@ -1,12 +1,18 @@
 import { isConfirmedLive } from "@/lib/stream-live-filter";
 import type { LiveStreamer, StreamerChannel } from "./types";
-import { getScanBatchSize } from "./youtube-config";
+import {
+  getDailyQuotaBudget,
+  getLiveCacheSeconds,
+  getQuotaSafetyLimit,
+  getScanBatchSize,
+} from "./youtube-config";
 import {
   buildStreamerMapFromSnapshot,
-  readYoutubeLiveSnapshot,
+  countConfirmedLive,
+  getCachedLiveData,
+  setCachedLiveData,
   snapshotStreamersFromMap,
-  writeYoutubeLiveSnapshot,
-  type YoutubeLiveScanSnapshot,
+  type CachedLiveData,
 } from "./youtube-live-store";
 import {
   runBatchedChannelLiveScan,
@@ -31,7 +37,7 @@ export interface RotatingLiveScanResult {
   livePrioritized: boolean;
   scannedStreamerIds: string[];
   skippedStreamerIds: string[];
-  snapshot: YoutubeLiveScanSnapshot;
+  snapshot: CachedLiveData;
 }
 
 interface ScanState {
@@ -148,7 +154,7 @@ export async function runRotatingLiveScan(
 ): Promise<RotatingLiveScanResult> {
   const batchSize = options.batchSize ?? getScanBatchSize();
   const resolveHandles = options.resolveHandles ?? false;
-  const existingSnapshot = await readYoutubeLiveSnapshot();
+  const existingSnapshot = await getCachedLiveData();
   const streamersById = buildStreamerMapFromSnapshot(channels, existingSnapshot);
   const scanState: ScanState = {
     scanCursor: existingSnapshot?.scanCursor ?? 0,
@@ -172,9 +178,15 @@ export async function runRotatingLiveScan(
   }
 
   const streamers = snapshotStreamersFromMap(channels, streamersById);
-  const snapshot: YoutubeLiveScanSnapshot = {
+  const cacheSeconds = getLiveCacheSeconds();
+  const checkedAtMs = Date.parse(checkedAt);
+  const nextScanAt = new Date(checkedAtMs + cacheSeconds * 1000).toISOString();
+
+  const snapshot: CachedLiveData = {
     streamers,
+    liveCount: countConfirmedLive(streamers),
     lastCheckedAt: checkedAt,
+    nextScanAt,
     scannedAt: checkedAt,
     scannedCount: selection.toScan.length,
     totalChannels: channels.length,
@@ -184,9 +196,11 @@ export async function runRotatingLiveScan(
     scannedStreamerIds: selection.scannedStreamerIds,
     skippedStreamerIds: selection.skippedStreamerIds,
     scanCursor: selection.nextCursor,
+    dailyQuotaBudget: getDailyQuotaBudget(),
+    quotaSafetyLimit: getQuotaSafetyLimit(),
   };
 
-  await writeYoutubeLiveSnapshot(snapshot);
+  await setCachedLiveData(snapshot);
 
   return {
     results,

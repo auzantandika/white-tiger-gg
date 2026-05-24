@@ -1060,6 +1060,13 @@ export async function getChannelLiveStatus(
       };
     }
 
+    if (!isFallbackEnabled()) {
+      debug.playlistItemsStatus = "skipped";
+      debug.videosListStatus = "skipped";
+      debug.finalStatus = "OFFLINE";
+      return { streamer: offlineStreamer(channel), debug };
+    }
+
     const uploadsResult = await fetchLiveViaUploadsPlaylist(resolvedChannelId, apiKey);
     debug.uploadsPlaylistId = uploadsResult.uploadsPlaylistId ?? "";
     debug.playlistItemsStatus = uploadsResult.playlistItemsStatus;
@@ -1273,6 +1280,20 @@ export async function runBatchedChannelLiveScan(
           debug: state.debug,
         });
       }
+    }
+
+    return results;
+  }
+
+  if (!isFallbackEnabled()) {
+    for (const state of unresolvedStates) {
+      state.debug.playlistItemsStatus = "skipped";
+      state.debug.videosListStatus = "skipped";
+      state.debug.finalStatus = "OFFLINE";
+      results.push({
+        streamer: offlineStreamer(state.channel),
+        debug: state.debug,
+      });
     }
 
     return results;

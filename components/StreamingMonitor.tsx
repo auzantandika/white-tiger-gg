@@ -70,6 +70,7 @@ export default function StreamingMonitor() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+  const [nextScanAt, setNextScanAt] = useState<string | null>(null);
   const [scannedCount, setScannedCount] = useState(0);
   const [recheckedLiveCount, setRecheckedLiveCount] = useState(0);
   const [livePrioritized, setLivePrioritized] = useState(false);
@@ -113,6 +114,7 @@ export default function StreamingMonitor() {
       setStreamers(normalized.streamers);
       setTotalChannels(normalized.totalChannels);
       setLastCheckedAt(normalized.lastCheckedAt);
+      setNextScanAt(normalized.nextScanAt);
       setScannedCount(normalized.scannedCount);
       setRecheckedLiveCount(normalized.recheckedLiveCount);
       setLivePrioritized(normalized.livePrioritized);
@@ -377,11 +379,11 @@ export default function StreamingMonitor() {
           totalChannels={channelCount}
           refreshCountdown={refreshCountdown}
           lastCheckedAt={lastCheckedAt}
+          nextScanAt={nextScanAt}
           scannedCount={scannedCount}
           recheckedLiveCount={recheckedLiveCount}
           livePrioritized={livePrioritized}
           cacheStale={cacheStale}
-          cacheSeconds={cacheSeconds}
           sidebarVisible={sidebarVisible}
           onToggleSidebar={handleToggleSidebar}
         />

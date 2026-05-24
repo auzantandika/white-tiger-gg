@@ -33,9 +33,11 @@ export function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
 export interface NormalizedYoutubeLiveResponse {
   streamers: LiveStreamer[];
   lastCheckedAt: string | null;
+  nextScanAt: string | null;
   scannedCount: number;
   scanBatchSize: number;
   totalChannels: number;
+  liveCount: number;
   recheckedLiveCount: number;
   livePrioritized: boolean;
   scannedStreamerIds: string[];
@@ -43,6 +45,7 @@ export interface NormalizedYoutubeLiveResponse {
   message: string | null;
   cacheStale: boolean;
   cacheSeconds: number;
+  cacheAgeSeconds: number | null;
 }
 
 export function normalizeYoutubeLiveResponse(
@@ -53,9 +56,11 @@ export function normalizeYoutubeLiveResponse(
   return {
     streamers,
     lastCheckedAt: data.lastCheckedAt ?? null,
+    nextScanAt: data.nextScanAt ?? null,
     scannedCount: data.scannedCount ?? 0,
     scanBatchSize: data.scanBatchSize ?? DEFAULT_SCAN_BATCH_SIZE,
     totalChannels: data.totalChannels ?? streamers.length,
+    liveCount: data.liveCount ?? getLiveStreamers(streamers).length,
     recheckedLiveCount: data.recheckedLiveCount ?? 0,
     livePrioritized: data.livePrioritized ?? false,
     scannedStreamerIds: Array.isArray(data.scannedStreamerIds)
@@ -67,5 +72,6 @@ export function normalizeYoutubeLiveResponse(
     message: data.message ?? null,
     cacheStale: data.cacheStale ?? false,
     cacheSeconds: data.cacheSeconds ?? 600,
+    cacheAgeSeconds: data.cacheAgeSeconds ?? null,
   };
 }

@@ -1,13 +1,16 @@
+import { getLiveStreamers } from "@/lib/stream-live-filter";
 import type { LiveStreamer, StreamerChannel } from "./types";
 
 const SNAPSHOT_KEY = "white-tiger-gg:youtube-live:snapshot";
 
-export interface YoutubeLiveScanSnapshot {
+export interface CachedLiveData {
   streamers: LiveStreamer[];
-  lastCheckedAt: string | null;
-  scannedAt: string | null;
-  scannedCount: number;
+  liveCount: number;
   totalChannels: number;
+  scannedCount: number;
+  lastCheckedAt: string;
+  nextScanAt: string;
+  scannedAt: string;
   scanBatchSize: number;
   recheckedLiveCount: number;
   livePrioritized: boolean;
@@ -15,11 +18,16 @@ export interface YoutubeLiveScanSnapshot {
   skippedStreamerIds: string[];
   scanCursor: number;
   quotaUsedEstimate?: number;
+  dailyQuotaBudget?: number;
+  quotaSafetyLimit?: number;
 }
 
-export interface YoutubeLiveStore {
-  getSnapshot(): Promise<YoutubeLiveScanSnapshot | null>;
-  setSnapshot(snapshot: YoutubeLiveScanSnapshot): Promise<void>;
+/** @deprecated Use CachedLiveData */
+export type YoutubeLiveScanSnapshot = CachedLiveData;
+
+interface YoutubeLiveStore {
+  read(): Promise<CachedLiveData | null>;
+  write(data: CachedLiveData): Promise<void>;
   provider: string;
 }
 
@@ -37,7 +45,7 @@ function createUnknownStreamer(channel: StreamerChannel): LiveStreamer {
 
 export function buildStreamerMapFromSnapshot(
   channels: StreamerChannel[],
-  snapshot: YoutubeLiveScanSnapshot | null,
+  snapshot: CachedLiveData | null,
 ): Map<string, LiveStreamer> {
   const streamersById = new Map<string, LiveStreamer>();
 
@@ -65,6 +73,10 @@ export function snapshotStreamersFromMap(
   );
 }
 
+export function countConfirmedLive(streamers: LiveStreamer[]): number {
+  return getLiveStreamers(streamers).length;
+}
+
 function getRedisRestConfig(): { url: string; token: string } | null {
   const url =
     process.env.KV_REST_API_URL?.trim() ??
@@ -87,7 +99,7 @@ class RedisRestYoutubeLiveStore implements YoutubeLiveStore {
     private readonly config: { url: string; token: string },
   ) {}
 
-  async getSnapshot(): Promise<YoutubeLiveScanSnapshot | null> {
+  async read(): Promise<CachedLiveData | null> {
     const response = await fetch(
       `${this.config.url}/get/${encodeURIComponent(SNAPSHOT_KEY)}`,
       {
@@ -99,7 +111,7 @@ class RedisRestYoutubeLiveStore implements YoutubeLiveStore {
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to read YouTube live snapshot (${response.status})`);
+      throw new Error(`Failed to read YouTube live cache (${response.status})`);
     }
 
     const body = (await response.json()) as { result?: string | null };
@@ -107,10 +119,10 @@ class RedisRestYoutubeLiveStore implements YoutubeLiveStore {
       return null;
     }
 
-    return JSON.parse(body.result) as YoutubeLiveScanSnapshot;
+    return JSON.parse(body.result) as CachedLiveData;
   }
 
-  async setSnapshot(snapshot: YoutubeLiveScanSnapshot): Promise<void> {
+  async write(data: CachedLiveData): Promise<void> {
     const response = await fetch(
       `${this.config.url}/set/${encodeURIComponent(SNAPSHOT_KEY)}`,
       {
@@ -120,12 +132,12 @@ class RedisRestYoutubeLiveStore implements YoutubeLiveStore {
           Authorization: `Bearer ${this.config.token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(snapshot),
+        body: JSON.stringify(data),
       },
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to write YouTube live snapshot (${response.status})`);
+      throw new Error(`Failed to write YouTube live cache (${response.status})`);
     }
   }
 }
@@ -133,20 +145,20 @@ class RedisRestYoutubeLiveStore implements YoutubeLiveStore {
 class MemoryYoutubeLiveStore implements YoutubeLiveStore {
   readonly provider = "memory";
 
-  private snapshot: YoutubeLiveScanSnapshot | null = null;
+  private snapshot: CachedLiveData | null = null;
 
-  async getSnapshot(): Promise<YoutubeLiveScanSnapshot | null> {
+  async read(): Promise<CachedLiveData | null> {
     return this.snapshot;
   }
 
-  async setSnapshot(snapshot: YoutubeLiveScanSnapshot): Promise<void> {
-    this.snapshot = snapshot;
+  async write(data: CachedLiveData): Promise<void> {
+    this.snapshot = data;
   }
 }
 
 let storeInstance: YoutubeLiveStore | null = null;
 
-export function getYoutubeLiveStore(): YoutubeLiveStore {
+function getYoutubeLiveStore(): YoutubeLiveStore {
   if (storeInstance) {
     return storeInstance;
   }
@@ -167,12 +179,45 @@ export function getYoutubeLiveStore(): YoutubeLiveStore {
   return storeInstance;
 }
 
-export async function readYoutubeLiveSnapshot(): Promise<YoutubeLiveScanSnapshot | null> {
-  return getYoutubeLiveStore().getSnapshot();
+export function getStoreProviderLabel(): string {
+  const url =
+    process.env.KV_REST_API_URL?.trim() ??
+    process.env.UPSTASH_REDIS_REST_URL?.trim();
+  return url ? "redis-rest" : "memory";
 }
 
-export async function writeYoutubeLiveSnapshot(
-  snapshot: YoutubeLiveScanSnapshot,
-): Promise<void> {
-  await getYoutubeLiveStore().setSnapshot(snapshot);
+export async function getCachedLiveData(): Promise<CachedLiveData | null> {
+  return getYoutubeLiveStore().read();
+}
+
+export async function setCachedLiveData(data: CachedLiveData): Promise<void> {
+  await getYoutubeLiveStore().write(data);
+}
+
+export async function getCachedLiveDataAge(): Promise<number | null> {
+  const data = await getCachedLiveData();
+  if (!data?.scannedAt) {
+    return null;
+  }
+
+  const scannedAtMs = Date.parse(data.scannedAt);
+  if (!Number.isFinite(scannedAtMs)) {
+    return null;
+  }
+
+  return Math.max(0, Math.floor((Date.now() - scannedAtMs) / 1000));
+}
+
+/** @deprecated Use getCachedLiveData */
+export async function readYoutubeLiveSnapshot(): Promise<CachedLiveData | null> {
+  return getCachedLiveData();
+}
+
+/** @deprecated Use setCachedLiveData */
+export async function writeYoutubeLiveSnapshot(data: CachedLiveData): Promise<void> {
+  await setCachedLiveData(data);
+}
+
+export async function getYoutubeLiveStoreProvider(): Promise<string> {
+  return getYoutubeLiveStore().provider;
 }

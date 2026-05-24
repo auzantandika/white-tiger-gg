@@ -1,13 +1,14 @@
+import { UNSCANNED_LIVE_MESSAGE } from "@/lib/constants";
 import { STREAMER_CHANNELS } from "@/lib/streamers";
 import { getLiveCacheSeconds } from "@/lib/youtube-config";
 import {
   buildStreamerMapFromSnapshot,
-  readYoutubeLiveSnapshot,
+  getCachedLiveData,
+  getCachedLiveDataAge,
+  getStoreProviderLabel,
   snapshotStreamersFromMap,
 } from "@/lib/youtube-live-store";
 import type { LiveStreamer, StreamerChannel, YoutubeLiveResponse } from "@/lib/types";
-
-import { UNSCANNED_LIVE_MESSAGE } from "@/lib/constants";
 
 function createUnknownStreamer(channel: StreamerChannel): LiveStreamer {
   return {
@@ -24,10 +25,14 @@ function createUnknownStreamer(channel: StreamerChannel): LiveStreamer {
 export function buildUnscannedLiveResponse(
   channels: StreamerChannel[] = STREAMER_CHANNELS,
 ): YoutubeLiveResponse {
+  const cacheSeconds = getLiveCacheSeconds();
+
   return {
     streamers: channels.map(createUnknownStreamer),
+    liveCount: 0,
     totalChannels: channels.length,
     lastCheckedAt: null,
+    nextScanAt: null,
     scannedCount: 0,
     scanBatchSize: 0,
     recheckedLiveCount: 0,
@@ -36,7 +41,8 @@ export function buildUnscannedLiveResponse(
     skippedStreamerIds: channels.map((channel) => channel.id),
     message: UNSCANNED_LIVE_MESSAGE,
     cacheStale: true,
-    cacheSeconds: getLiveCacheSeconds(),
+    cacheSeconds,
+    cacheAgeSeconds: null,
     source: "cache",
   };
 }
@@ -59,7 +65,8 @@ export function isSnapshotStale(
 
 export async function readCachedYoutubeLiveResponse(): Promise<YoutubeLiveResponse> {
   const cacheSeconds = getLiveCacheSeconds();
-  const snapshot = await readYoutubeLiveSnapshot();
+  const snapshot = await getCachedLiveData();
+  const cacheAgeSeconds = await getCachedLiveDataAge();
 
   if (!snapshot?.scannedAt) {
     return buildUnscannedLiveResponse();
@@ -72,8 +79,10 @@ export async function readCachedYoutubeLiveResponse(): Promise<YoutubeLiveRespon
 
   return {
     streamers,
+    liveCount: snapshot.liveCount,
     totalChannels: snapshot.totalChannels,
     lastCheckedAt: snapshot.lastCheckedAt,
+    nextScanAt: snapshot.nextScanAt,
     scannedCount: snapshot.scannedCount,
     scanBatchSize: snapshot.scanBatchSize,
     recheckedLiveCount: snapshot.recheckedLiveCount,
@@ -82,17 +91,17 @@ export async function readCachedYoutubeLiveResponse(): Promise<YoutubeLiveRespon
     skippedStreamerIds: snapshot.skippedStreamerIds,
     cacheStale: isSnapshotStale(snapshot.scannedAt, cacheSeconds),
     cacheSeconds,
+    cacheAgeSeconds,
     source: "cache",
     storeProvider: getStoreProviderLabel(),
     ...(snapshot.quotaUsedEstimate !== undefined
       ? { quotaUsedEstimate: snapshot.quotaUsedEstimate }
       : {}),
+    ...(snapshot.dailyQuotaBudget !== undefined
+      ? { dailyQuotaBudget: snapshot.dailyQuotaBudget }
+      : {}),
+    ...(snapshot.quotaSafetyLimit !== undefined
+      ? { quotaSafetyLimit: snapshot.quotaSafetyLimit }
+      : {}),
   };
-}
-
-function getStoreProviderLabel(): string {
-  const url =
-    process.env.KV_REST_API_URL?.trim() ??
-    process.env.UPSTASH_REDIS_REST_URL?.trim();
-  return url ? "redis-rest" : "memory";
 }
