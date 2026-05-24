@@ -107,24 +107,24 @@ function offlineStreamer(channel: StreamerChannel): LiveStreamer {
   };
 }
 
-async function resolveChannelId(
-  channel: StreamerChannel,
+export function extractChannelIdFromUrl(url: string): string | null {
+  const match = url.match(/\/channel\/(UC[\w-]+)/i);
+  return match?.[1] ?? null;
+}
+
+export function extractHandleFromUrl(url: string): string | null {
+  const match = url.match(/\/@([^/?#]+)/);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  return `@${decodeURIComponent(match[1])}`;
+}
+
+async function resolveHandleToChannelId(
+  handle: string,
   apiKey: string,
 ): Promise<{ channelId: string | null; status: string; errorMessage?: string }> {
-  const directId = channel.channelId?.trim();
-  if (directId) {
-    return { channelId: directId, status: "direct" };
-  }
-
-  const handle = channel.channelHandle?.trim();
-  if (!handle) {
-    return {
-      channelId: null,
-      status: "not_found",
-      errorMessage: "No channel handle or channel ID configured",
-    };
-  }
-
   const forHandle = normalizeHandle(handle);
   const url = buildApiUrl("/channels", { part: "id", forHandle }, apiKey);
 
@@ -150,6 +150,72 @@ async function resolveChannelId(
   }
 
   return { channelId, status: "ok" };
+}
+
+export interface ResolveStreamerChannelResult {
+  channelId: string | null;
+  status: string;
+  channelHandle: string;
+  channelIdField: string;
+  errorMessage?: string;
+}
+
+export async function resolveStreamerChannel(
+  streamer: StreamerChannel,
+  apiKey: string,
+): Promise<ResolveStreamerChannelResult> {
+  const configuredId = streamer.channelId?.trim() ?? "";
+  const configuredHandle = streamer.channelHandle?.trim() ?? "";
+  const urlChannelId = extractChannelIdFromUrl(streamer.channelUrl) ?? "";
+  const urlHandle = extractHandleFromUrl(streamer.channelUrl) ?? "";
+
+  if (configuredId) {
+    return {
+      channelId: configuredId,
+      status: "direct",
+      channelHandle: configuredHandle || urlHandle,
+      channelIdField: configuredId,
+    };
+  }
+
+  if (urlChannelId) {
+    return {
+      channelId: urlChannelId,
+      status: "url_channel_id",
+      channelHandle: urlHandle,
+      channelIdField: urlChannelId,
+    };
+  }
+
+  if (urlHandle) {
+    const resolved = await resolveHandleToChannelId(urlHandle, apiKey);
+    return {
+      channelId: resolved.channelId,
+      status: resolved.channelId ? "url_handle" : resolved.status,
+      channelHandle: urlHandle,
+      channelIdField: "",
+      errorMessage: resolved.errorMessage,
+    };
+  }
+
+  if (configuredHandle) {
+    const resolved = await resolveHandleToChannelId(configuredHandle, apiKey);
+    return {
+      channelId: resolved.channelId,
+      status: resolved.channelId ? "handle" : resolved.status,
+      channelHandle: configuredHandle,
+      channelIdField: "",
+      errorMessage: resolved.errorMessage,
+    };
+  }
+
+  return {
+    channelId: null,
+    status: "not_found",
+    channelHandle: "",
+    channelIdField: "",
+    errorMessage: "No channel ID or handle could be extracted from streamer config",
+  };
 }
 
 async function fetchPrimaryLiveVideo(
@@ -294,8 +360,8 @@ export async function getChannelLiveStatus(
   apiKey: string,
 ): Promise<ChannelLiveResult> {
   const debug: StreamerLiveDebug = {
-    channelHandle: channel.channelHandle ?? "",
-    channelId: channel.channelId ?? "",
+    channelHandle: channel.channelHandle ?? extractHandleFromUrl(channel.channelUrl) ?? "",
+    channelId: channel.channelId ?? extractChannelIdFromUrl(channel.channelUrl) ?? "",
     resolvedChannelId: "",
     resolveStatus: "pending",
     primaryLiveSearchStatus: "pending",
@@ -304,9 +370,11 @@ export async function getChannelLiveStatus(
   };
 
   try {
-    const resolved = await resolveChannelId(channel, apiKey);
+    const resolved = await resolveStreamerChannel(channel, apiKey);
     debug.resolveStatus = resolved.status;
     debug.resolvedChannelId = resolved.channelId ?? "";
+    debug.channelHandle = resolved.channelHandle;
+    debug.channelId = resolved.channelIdField || debug.channelId;
 
     if (resolved.errorMessage) {
       debug.errorMessage = resolved.errorMessage;
