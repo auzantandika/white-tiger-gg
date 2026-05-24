@@ -12,6 +12,7 @@ import {
   getLiveStreamerIds,
   getLiveStreamers,
   isConfirmedLive,
+  mergeStreamersPreservingLive,
   normalizeYoutubeLiveResponse,
 } from "@/lib/stream-live-filter";
 import {
@@ -111,7 +112,9 @@ export default function StreamingMonitor() {
         });
       }
 
-      setStreamers(normalized.streamers);
+      setStreamers((previous) =>
+        mergeStreamersPreservingLive(previous, normalized.streamers),
+      );
       setTotalChannels(normalized.totalChannels);
       setLastCheckedAt(normalized.lastCheckedAt);
       setNextScanAt(normalized.nextScanAt);

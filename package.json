@@ -9,7 +9,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:streamers": "node scripts/sync-streamers.js",
+    "validate:streamers": "node scripts/vps-live-service/validate-streamers.js"
   },
   "dependencies": {
     "next": "16.2.6",

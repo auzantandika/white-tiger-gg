@@ -1,4 +1,7 @@
-const { probeChannelLivePageById } = require("./youtube-live-page");
+const {
+  probeChannelLivePageById,
+  isValidYouTubeVideoId,
+} = require("./youtube-live-page");
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 const REQUEST_CONCURRENCY = 4;
@@ -63,7 +66,7 @@ function thumbnailFromSnippet(snippet) {
   );
 }
 
-function offlineStreamer(channel) {
+function offlineStreamer(channel, debug = {}) {
   return {
     id: channel.id,
     name: channel.name,
@@ -73,6 +76,15 @@ function offlineStreamer(channel) {
     title: "",
     thumbnail: "",
     channelId: channel.channelId,
+    livePageStatus: debug.livePageStatus,
+    livePageVideoId: debug.livePageVideoId ?? "",
+    livePageVerifyStatus: debug.livePageVerifyStatus,
+    detectedVideoId: debug.detectedVideoId ?? "",
+    detectedVideoChannelId: debug.detectedVideoChannelId ?? "",
+    detectedVideoChannelTitle: debug.detectedVideoChannelTitle ?? "",
+    expectedChannelId: debug.expectedChannelId ?? channel.channelId,
+    channelOwnershipMatch: debug.channelOwnershipMatch ?? false,
+    finalStatus: debug.finalStatus ?? "OFFLINE",
   };
 }
 
@@ -227,16 +239,7 @@ function verifyCandidatesForChannel(candidateIds, expectedChannelId, videoById) 
     }
 
     if (isLive && !belongsToStreamer) {
-      return {
-        live: null,
-        verifyStatus: "channel_mismatch",
-        detectedVideoId: details.videoId,
-        detectedVideoChannelId: details.channelId,
-        detectedVideoChannelTitle: details.channelTitle,
-        expectedChannelId,
-        channelOwnershipMatch: false,
-        errorMessage: CHANNEL_MISMATCH_MESSAGE,
-      };
+      continue;
     }
   }
 
@@ -360,6 +363,92 @@ function createInitialDebug(channel) {
   };
 }
 
+const MAX_TRUSTED_LIVE_PAGE_CANDIDATES = 3;
+const MAX_FALLBACK_LIVE_PAGE_CANDIDATES = 4;
+
+function limitLivePageCandidates(probe) {
+  if (!probe) {
+    return [];
+  }
+
+  const trusted = probe.trustedCandidateIds ?? [];
+  if (trusted.length > 0) {
+    return trusted.slice(0, MAX_TRUSTED_LIVE_PAGE_CANDIDATES);
+  }
+
+  if (
+    probe.livePageVideoId &&
+    isValidYouTubeVideoId(probe.livePageVideoId, { requireDigit: false })
+  ) {
+    return [probe.livePageVideoId];
+  }
+
+  // VPS datacenter IPs often don't receive canonical URL from YouTube.
+  // Fall back to non-trusted candidates — API verification will confirm
+  // live status and validate channel ownership before accepting.
+  const fallback = (probe.candidateIds ?? [])
+    .filter((id) => isValidYouTubeVideoId(id, { requireDigit: true }))
+    .slice(0, MAX_FALLBACK_LIVE_PAGE_CANDIDATES);
+
+  return fallback;
+}
+
+async function verifyChannelLivePageCandidates(
+  channelId,
+  probe,
+  apiKey,
+  attempt = 0,
+) {
+  const candidateIds = limitLivePageCandidates(probe);
+
+  if (candidateIds.length === 0) {
+    return {
+      verifyStatus: "skipped",
+      live: null,
+      detectedVideoId: "",
+      detectedVideoChannelId: "",
+      detectedVideoChannelTitle: "",
+      expectedChannelId: channelId,
+      channelOwnershipMatch: false,
+    };
+  }
+
+  const fetched = await batchFetchVideoDetails(candidateIds, apiKey);
+
+  if (fetched.verifyStatus === "error") {
+    return {
+      verifyStatus: "error",
+      live: null,
+      detectedVideoId: candidateIds[0] ?? "",
+      detectedVideoChannelId: "",
+      detectedVideoChannelTitle: "",
+      expectedChannelId: channelId,
+      channelOwnershipMatch: false,
+      errorMessage:
+        fetched.errorMessage ??
+        "Failed to verify live page video with YouTube API",
+    };
+  }
+
+  const result = findLiveForCandidates(
+    candidateIds,
+    fetched.videoById,
+    channelId,
+  );
+
+  if (
+    !result.live &&
+    result.verifyStatus === "not_live" &&
+    attempt === 0 &&
+    candidateIds.length > 0
+  ) {
+    await sleep(400);
+    return verifyChannelLivePageCandidates(channelId, probe, apiKey, 1);
+  }
+
+  return result;
+}
+
 async function runBatchedChannelLiveScan(channels, apiKey) {
   const states = await processWithConcurrency(
     channels,
@@ -417,44 +506,24 @@ async function runBatchedChannelLiveScan(channels, apiKey) {
     fallbackStates.push(state);
   }
 
-  const livePageCandidateIds = fallbackStates.flatMap(
-    (state) => state.probe?.candidateIds ?? [],
-  );
-  const livePageVerification = await batchFetchVideoDetails(
-    livePageCandidateIds,
-    apiKey,
-  );
-  const livePageVerifyFailed = livePageVerification.verifyStatus === "error";
-  const livePageQuotaExceeded = isQuotaExceededError(
-    livePageVerification.errorMessage,
-  );
-
   const unresolvedStates = [];
 
-  for (const state of fallbackStates) {
+  const liveVerifyResults = await processWithConcurrency(
+    fallbackStates,
+    REQUEST_CONCURRENCY,
+    async (state) => {
+      const verification = await verifyChannelLivePageCandidates(
+        state.channelId,
+        state.probe,
+        apiKey,
+      );
+
+      return { state, verification };
+    },
+  );
+
+  for (const { state, verification } of liveVerifyResults) {
     const expectedChannelId = state.channelId;
-
-    if (livePageVerifyFailed) {
-      state.debug.livePageVerifyStatus = "error";
-      state.debug.playlistItemsStatus = "skipped";
-      state.debug.videosListStatus = "skipped";
-      state.debug.finalStatus = "UNKNOWN";
-      state.debug.expectedChannelId = expectedChannelId;
-      state.debug.errorMessage =
-        livePageVerification.errorMessage ??
-        "Failed to verify live page video with YouTube API";
-      results.push({
-        streamer: unknownStreamer(state.channel, state.debug.errorMessage),
-        debug: state.debug,
-      });
-      continue;
-    }
-
-    const verification = findLiveForCandidates(
-      state.probe?.candidateIds ?? [],
-      livePageVerification.videoById,
-      expectedChannelId,
-    );
 
     state.debug.detectedVideoId = verification.detectedVideoId;
     state.debug.detectedVideoChannelId = verification.detectedVideoChannelId;
@@ -463,11 +532,33 @@ async function runBatchedChannelLiveScan(channels, apiKey) {
     state.debug.channelOwnershipMatch = verification.channelOwnershipMatch;
     state.debug.livePageVerifyStatus = verification.verifyStatus;
     state.debug.livePageVideoId =
-      verification.detectedVideoId || state.probe?.livePageVideoId || "";
+      state.probe?.livePageVideoId || verification.detectedVideoId || "";
     state.debug.expectedChannelId = expectedChannelId;
 
     if (verification.errorMessage) {
       state.debug.errorMessage = verification.errorMessage;
+    }
+
+    if (verification.verifyStatus === "error") {
+      state.debug.playlistItemsStatus = "skipped";
+      state.debug.videosListStatus = "skipped";
+      state.debug.finalStatus = "UNKNOWN";
+      results.push({
+        streamer: unknownStreamer(state.channel, state.debug.errorMessage),
+        debug: state.debug,
+      });
+      continue;
+    }
+
+    if (verification.verifyStatus === "skipped") {
+      state.debug.playlistItemsStatus = "skipped";
+      state.debug.videosListStatus = "skipped";
+      state.debug.finalStatus = "OFFLINE";
+      results.push({
+        streamer: offlineStreamer(state.channel, state.debug),
+        debug: state.debug,
+      });
+      continue;
     }
 
     if (verification.live) {
@@ -483,27 +574,7 @@ async function runBatchedChannelLiveScan(channels, apiKey) {
     unresolvedStates.push(state);
   }
 
-  if (unresolvedStates.length === 0 || livePageQuotaExceeded) {
-    if (livePageQuotaExceeded) {
-      for (const state of unresolvedStates) {
-        state.debug.finalStatus = "UNKNOWN";
-        state.debug.errorMessage =
-          livePageVerification.errorMessage ?? "YouTube API quota exceeded";
-        results.push({
-          streamer: unknownStreamer(state.channel, state.debug.errorMessage),
-          debug: state.debug,
-        });
-      }
-    } else {
-      for (const state of unresolvedStates) {
-        state.debug.finalStatus = "OFFLINE";
-        results.push({
-          streamer: offlineStreamer(state.channel),
-          debug: state.debug,
-        });
-      }
-    }
-
+  if (unresolvedStates.length === 0) {
     return results;
   }
 
@@ -513,7 +584,7 @@ async function runBatchedChannelLiveScan(channels, apiKey) {
       state.debug.videosListStatus = "skipped";
       state.debug.finalStatus = "OFFLINE";
       results.push({
-        streamer: offlineStreamer(state.channel),
+        streamer: offlineStreamer(state.channel, state.debug),
         debug: state.debug,
       });
     }
@@ -600,7 +671,7 @@ async function runBatchedChannelLiveScan(channels, apiKey) {
       state.debug.errorMessage = verification.errorMessage;
     }
     results.push({
-      streamer: offlineStreamer(state.channel),
+      streamer: offlineStreamer(state.channel, state.debug),
       debug: state.debug,
     });
   }
@@ -608,7 +679,43 @@ async function runBatchedChannelLiveScan(channels, apiKey) {
   return results;
 }
 
-async function scanYouTubeLive(channels, apiKey) {
+async function reconcileDowngradedLiveStreamers(
+  channels,
+  streamers,
+  previousById,
+  apiKey,
+  checkedAt,
+) {
+  const { isConfirmedLive } = require("./stream-live-filter");
+  const channelById = new Map(channels.map((channel) => [channel.id, channel]));
+  let recheckedLiveCount = 0;
+
+  for (let index = 0; index < streamers.length; index += 1) {
+    const current = streamers[index];
+    const previous = previousById.get(current.id);
+
+    if (!previous || !isConfirmedLive(previous) || isConfirmedLive(current)) {
+      continue;
+    }
+
+    const channel = channelById.get(current.id);
+    if (!channel) {
+      continue;
+    }
+
+    const [recheckResult] = await runBatchedChannelLiveScan([channel], apiKey);
+    const rechecked = recheckResult?.streamer;
+
+    if (rechecked && isConfirmedLive(rechecked)) {
+      streamers[index] = { ...rechecked, lastCheckedAt: checkedAt };
+      recheckedLiveCount += 1;
+    }
+  }
+
+  return recheckedLiveCount;
+}
+
+async function scanYouTubeLive(channels, apiKey, options = {}) {
   if (!apiKey) {
     throw new Error("YOUTUBE_API_KEY is not configured");
   }
@@ -637,6 +744,20 @@ async function scanYouTubeLive(channels, apiKey) {
     return { ...streamer, lastCheckedAt: checkedAt };
   });
 
+  const previousById = new Map(
+    (options.previousCache?.streamers ?? []).map((streamer) => [
+      streamer.id,
+      streamer,
+    ]),
+  );
+  const recheckedLiveCount = await reconcileDowngradedLiveStreamers(
+    channels,
+    streamers,
+    previousById,
+    apiKey,
+    checkedAt,
+  );
+
   const cacheSeconds = Number(process.env.CACHE_SECONDS || 600);
   const nextScanAt = new Date(
     Date.parse(checkedAt) + cacheSeconds * 1000,
@@ -648,8 +769,8 @@ async function scanYouTubeLive(channels, apiKey) {
     totalChannels: channels.length,
     scannedCount: scannableChannels.length,
     scanBatchSize: channels.length,
-    recheckedLiveCount: 0,
-    livePrioritized: false,
+    recheckedLiveCount,
+    livePrioritized: recheckedLiveCount > 0,
     scannedStreamerIds: scannableChannels.map((channel) => channel.id),
     skippedStreamerIds: missingChannelId.map((channel) => channel.id),
     scanCursor: 0,

@@ -37,6 +37,8 @@ scp "${SCP_OPTS[@]}" -r \
   "${SERVICE_SOURCE_DIR}/package.json" \
   "${SERVICE_SOURCE_DIR}/package-lock.json" \
   "${SERVICE_SOURCE_DIR}/.env.example" \
+  "${SERVICE_SOURCE_DIR}/debug-channel.js" \
+  "${SERVICE_SOURCE_DIR}/validate-streamers.js" \
   "${SERVICE_SOURCE_DIR}/lib" \
   "${SSH_TARGET}:~/${REMOTE_DIR}/"
 

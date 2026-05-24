@@ -30,6 +30,41 @@ export function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
   return getLiveStreamers(streamers).map((streamer) => streamer.id);
 }
 
+export function mergeStreamersPreservingLive(
+  previous: LiveStreamer[],
+  incoming: LiveStreamer[],
+): LiveStreamer[] {
+  if (previous.length === 0) {
+    return incoming;
+  }
+
+  const previousById = new Map(previous.map((streamer) => [streamer.id, streamer]));
+
+  return incoming.map((incomingStreamer) => {
+    const previousStreamer = previousById.get(incomingStreamer.id);
+
+    if (!previousStreamer || !isConfirmedLive(previousStreamer)) {
+      return incomingStreamer;
+    }
+
+    if (isConfirmedLive(incomingStreamer)) {
+      return incomingStreamer;
+    }
+
+    // Only preserve LIVE on real API errors (quota/network) — not on OFFLINE,
+    // which now means the scanner actively confirmed no live stream.
+    if (incomingStreamer.status === "UNKNOWN") {
+      return {
+        ...previousStreamer,
+        lastCheckedAt:
+          incomingStreamer.lastCheckedAt ?? previousStreamer.lastCheckedAt,
+      };
+    }
+
+    return incomingStreamer;
+  });
+}
+
 export interface NormalizedYoutubeLiveResponse {
   streamers: LiveStreamer[];
   lastCheckedAt: string | null;

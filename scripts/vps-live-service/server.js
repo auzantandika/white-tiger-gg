@@ -6,7 +6,13 @@ const fs = require("fs/promises");
 const path = require("path");
 const { countConfirmedLive } = require("./lib/stream-live-filter");
 const { STREAMER_CHANNELS } = require("./lib/streamers");
-const { isQuotaExceededError, scanYouTubeLive } = require("./lib/youtube-scanner");
+const { probeChannelLivePageById } = require("./lib/youtube-live-page");
+const {
+  isQuotaExceededError,
+  runBatchedChannelLiveScan,
+  scanYouTubeLive,
+  getStreamerChannelIdOnly,
+} = require("./lib/youtube-scanner");
 
 dotenv.config();
 
@@ -149,7 +155,10 @@ async function runScan(trigger = "cron") {
   scanInProgress = true;
 
   try {
-    const payload = await scanYouTubeLive(STREAMER_CHANNELS, YOUTUBE_API_KEY);
+    const previousCache = await readCacheFile().catch(() => null);
+    const payload = await scanYouTubeLive(STREAMER_CHANNELS, YOUTUBE_API_KEY, {
+      previousCache,
+    });
     payload.ok = true;
     payload.trigger = trigger;
     await writeCacheFile(payload);
@@ -195,6 +204,72 @@ app.get("/live-data", async (_req, res) => {
   }
 });
 
+function resolveStreamerChannel(query) {
+  const normalized = String(query || "").trim().toLowerCase();
+  const byId = STREAMER_CHANNELS.find(
+    (channel) => channel.id.toLowerCase() === normalized,
+  );
+  if (byId) {
+    return byId;
+  }
+
+  return STREAMER_CHANNELS.find(
+    (channel) => getStreamerChannelIdOnly(channel)?.toLowerCase() === normalized,
+  );
+}
+
+app.get("/debug-channel/:streamerId", async (req, res) => {
+  if (!isAuthorized(req)) {
+    return unauthorizedResponse(res);
+  }
+
+  const channel =
+    resolveStreamerChannel(req.params.streamerId) ??
+    resolveStreamerChannel("ajaxynf");
+
+  if (!channel) {
+    return res.status(404).json({ error: "Streamer not found" });
+  }
+
+  const channelId = getStreamerChannelIdOnly(channel);
+  if (!channelId) {
+    return res.status(400).json({ error: "Missing channelId" });
+  }
+
+  try {
+    const probe = await probeChannelLivePageById(channelId);
+    const payload = {
+      channel: {
+        id: channel.id,
+        name: channel.name,
+        channelId,
+      },
+      probe,
+    };
+
+    if (!YOUTUBE_API_KEY) {
+      return res.json({
+        ...payload,
+        scan: null,
+        message: "YOUTUBE_API_KEY is not configured",
+      });
+    }
+
+    const scanResults = await runBatchedChannelLiveScan([channel], YOUTUBE_API_KEY);
+    const scan = scanResults[0] ?? null;
+
+    return res.json({
+      ...payload,
+      scan,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to debug channel";
+    const status = isQuotaExceededError(message) ? 429 : 500;
+    return res.status(status).json({ error: message });
+  }
+});
+
 app.post("/scan-now", async (req, res) => {
   if (!isAuthorized(req)) {
     return unauthorizedResponse(res);
@@ -237,10 +312,21 @@ async function start() {
     });
   });
 
-  if (!(await readCacheFile()) && YOUTUBE_API_KEY) {
-    runScan("startup").catch((error) => {
-      console.error(`[${PM2_NAME}] Startup scan failed:`, error);
-    });
+  if (YOUTUBE_API_KEY) {
+    const cache = await readCacheFile().catch(() => null);
+    const scannedAtMs = Date.parse(
+      cache?.scannedAt ?? cache?.lastCheckedAt ?? "",
+    );
+    const cacheAgeSeconds = Number.isFinite(scannedAtMs)
+      ? Math.max(0, Math.floor((Date.now() - scannedAtMs) / 1000))
+      : Number.POSITIVE_INFINITY;
+    const shouldScanOnStartup = !cache || cacheAgeSeconds >= CACHE_SECONDS;
+
+    if (shouldScanOnStartup) {
+      runScan("startup").catch((error) => {
+        console.error(`[${PM2_NAME}] Startup scan failed:`, error);
+      });
+    }
   }
 
   app.listen(PORT, "0.0.0.0", () => {
