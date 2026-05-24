@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { STREAMER_CHANNELS } from "@/lib/streamers";
-import { verifyCronSecret } from "@/lib/youtube-cron-auth";
+import { checkCronAuth } from "@/lib/youtube-cron-auth";
 import { getScanBatchSize } from "@/lib/youtube-config";
 import { runRotatingLiveScan } from "@/lib/youtube-live-scan";
 import { isQuotaExceededError } from "@/lib/youtube-server";
@@ -9,8 +9,23 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!verifyCronSecret(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = checkCronAuth(request);
+
+  if (!auth.ok) {
+    if (auth.reason === "missing_secret") {
+      return NextResponse.json(
+        { error: "CRON_SECRET is not configured" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        error: "Unauthorized",
+        ...auth.debug,
+      },
+      { status: 401 },
+    );
   }
 
   const apiKey = process.env.YOUTUBE_API_KEY;
