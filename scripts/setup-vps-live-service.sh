@@ -16,6 +16,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SERVICE_SOURCE_DIR="${SCRIPT_DIR}/vps-live-service"
 SSH_TARGET="${VPS_USER}@${VPS_HOST}"
 SSH_OPTS=(-p "${VPS_PORT}" -o StrictHostKeyChecking=accept-new)
+SCP_OPTS=(-P "${VPS_PORT}" -o StrictHostKeyChecking=accept-new)
 
 echo "==> White Tiger GG VPS live service setup"
 echo "    Target: ${SSH_TARGET}"
@@ -56,7 +57,7 @@ echo "==> Creating remote app directory..."
 ssh "${SSH_OPTS[@]}" "${SSH_TARGET}" "mkdir -p ~/${REMOTE_DIR}/data"
 
 echo "==> Copying service files to VPS..."
-scp "${SSH_OPTS[@]}" -r \
+scp "${SCP_OPTS[@]}" -r \
   "${SERVICE_SOURCE_DIR}/package.json" \
   "${SERVICE_SOURCE_DIR}/server.js" \
   "${SERVICE_SOURCE_DIR}/.env.example" \
