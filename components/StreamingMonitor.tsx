@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   assignStreamerToSlot,
   buildInitialAssignments,
@@ -20,7 +20,6 @@ import StreamerSidebar from "./StreamerSidebar";
 import StreamingMonitorHeader from "./StreamingMonitorHeader";
 import StreamSlot from "./StreamSlot";
 
-const REFRESH_INTERVAL_MS = 300_000;
 const REFRESH_SECONDS = 300;
 
 function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
@@ -47,6 +46,8 @@ export default function StreamingMonitor() {
   >(null);
   const [selectedSlot, setSelectedSlot] = useState(0);
   const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [refreshCountdown, setRefreshCountdown] = useState(REFRESH_SECONDS);
   const [streamers, setStreamers] = useState<LiveStreamer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +59,14 @@ export default function StreamingMonitor() {
     () => new Set(),
   );
 
+  const fetchInFlightRef = useRef(false);
+
   const fetchLiveStatus = useCallback(async (showLoading = false) => {
+    if (fetchInFlightRef.current) {
+      return;
+    }
+
+    fetchInFlightRef.current = true;
     if (showLoading) setLoading(true);
 
     try {
@@ -82,23 +90,46 @@ export default function StreamingMonitor() {
           : "Live detection unavailable. Please check YouTube API key or quota.",
       );
     } finally {
+      fetchInFlightRef.current = false;
       setLoading(false);
     }
   }, []);
 
+  const resetRefreshCountdown = useCallback(() => {
+    setRefreshCountdown(REFRESH_SECONDS);
+  }, []);
+
+  const refreshLiveStatus = useCallback(
+    async (showLoading = false) => {
+      await fetchLiveStatus(showLoading);
+      resetRefreshCountdown();
+    },
+    [fetchLiveStatus, resetRefreshCountdown],
+  );
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      void fetchLiveStatus(true);
+      void refreshLiveStatus(true);
     }, 0);
-
-    const interval = window.setInterval(
-      () => void fetchLiveStatus(false),
-      REFRESH_INTERVAL_MS,
-    );
 
     return () => {
       window.clearTimeout(timeoutId);
-      window.clearInterval(interval);
+    };
+  }, [refreshLiveStatus]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setRefreshCountdown((previous) => {
+        if (previous <= 1) {
+          void fetchLiveStatus(false);
+          return REFRESH_SECONDS;
+        }
+        return previous - 1;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
     };
   }, [fetchLiveStatus]);
 
@@ -229,10 +260,15 @@ export default function StreamingMonitor() {
     setFocusedStreamId(null);
   }, []);
 
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarVisible((visible) => !visible);
+  }, []);
+
   const liveCount = liveIds.length;
   const showScanning = loading && streamers.length === 0;
   const showNoLive = !loading && !error && liveCount === 0;
   const showGrid = !showScanning && !showNoLive && !focusedStreamer;
+  const showSidebar = !focusedStreamer && sidebarVisible;
 
   return (
     <section
@@ -243,7 +279,10 @@ export default function StreamingMonitor() {
         <StreamingMonitorHeader
           liveCount={liveCount}
           totalChannels={streamers.length}
-          refreshSeconds={REFRESH_SECONDS}
+          refreshCountdown={refreshCountdown}
+          sidebarVisible={sidebarVisible}
+          onToggleSidebar={handleToggleSidebar}
+          showSidebarToggle={!focusedStreamer}
         />
       </div>
 
@@ -273,7 +312,7 @@ export default function StreamingMonitor() {
           <p className="mt-1 text-xs text-zinc-400">{error}</p>
           <button
             type="button"
-            onClick={() => fetchLiveStatus(true)}
+            onClick={() => void refreshLiveStatus(true)}
             className="mt-2 min-h-9 border border-blue-800/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-blue-300 hover:bg-blue-950/40"
           >
             Retry
@@ -322,15 +361,23 @@ export default function StreamingMonitor() {
           )}
         </div>
 
-        {!focusedStreamer && (
-          <StreamerSidebar
-            streamers={streamers}
-            loading={loading}
-            error={error}
-            onAssignStreamer={handleAssignStreamer}
-            onRetry={() => fetchLiveStatus(true)}
-          />
-        )}
+        <div
+          className={`min-w-0 shrink-0 overflow-hidden transition-[max-width,opacity] duration-300 ease-in-out ${
+            showSidebar
+              ? "max-h-[2000px] w-full opacity-100 lg:max-h-none lg:w-60 xl:w-64"
+              : "max-h-0 w-full opacity-0 lg:max-h-none lg:w-0 lg:opacity-0"
+          }`}
+        >
+          {showSidebar && (
+            <StreamerSidebar
+              streamers={streamers}
+              loading={loading}
+              error={error}
+              onAssignStreamer={handleAssignStreamer}
+              onRetry={() => void refreshLiveStatus(true)}
+            />
+          )}
+        </div>
       </div>
 
       {!error && (
@@ -339,7 +386,7 @@ export default function StreamingMonitor() {
             lastCheckedAt={lastCheckedAt}
             scannedCount={scannedCount}
             scanBatchSize={scanBatchSize}
-            refreshSeconds={REFRESH_SECONDS}
+            refreshCountdown={refreshCountdown}
           />
         </div>
       )}
