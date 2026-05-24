@@ -51,6 +51,6 @@ export interface PlayersResponse {
 
 export type TabId = "streaming" | "player-finder";
 
-export type GridLayout = "1x1" | "2x1" | "2x2" | "3x2" | "4x2" | "ALL";
+export type GridLayout = "1x1" | "2x1" | "2x2" | "3x2" | "3x3" | "4x2" | "ALL";
 
 export type SidebarFilter = "LIVE" | "ALL";

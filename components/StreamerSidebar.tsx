@@ -22,6 +22,11 @@ export default function StreamerSidebar({
   const [filter, setFilter] = useState<SidebarFilter>("LIVE");
   const [search, setSearch] = useState("");
 
+  const liveCount = useMemo(
+    () => streamers.filter((streamer) => streamer.status === "LIVE").length,
+    [streamers],
+  );
+
   const filteredStreamers = useMemo(() => {
     let list = streamers;
 
@@ -40,40 +45,48 @@ export default function StreamerSidebar({
   }, [filter, search, streamers]);
 
   return (
-    <aside className="flex w-full min-w-0 shrink-0 flex-col border border-white/10 bg-black/60 lg:w-64 xl:w-72">
-      <div className="flex border-b border-white/5">
-        {(["LIVE", "ALL"] as SidebarFilter[]).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setFilter(tab)}
-            className={`min-h-11 flex-1 px-3 py-3 font-mono text-[10px] uppercase tracking-widest transition-colors ${
-              filter === tab
-                ? "border-b border-blue-500 bg-blue-950/20 text-blue-300"
-                : "text-zinc-600 hover:text-zinc-400"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+    <aside className="flex w-full min-w-0 shrink-0 flex-col border border-white/10 bg-black/70 lg:w-72 xl:w-80">
+      <div className="flex border-b border-white/10">
+        <button
+          type="button"
+          onClick={() => setFilter("LIVE")}
+          className={`min-h-10 flex-1 px-2 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors sm:min-h-11 ${
+            filter === "LIVE"
+              ? "border-b border-blue-500 bg-blue-950/30 text-blue-300"
+              : "text-zinc-600 hover:text-zinc-400"
+          }`}
+        >
+          Live ({liveCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilter("ALL")}
+          className={`min-h-10 flex-1 px-2 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors sm:min-h-11 ${
+            filter === "ALL"
+              ? "border-b border-blue-500 bg-blue-950/30 text-blue-300"
+              : "text-zinc-600 hover:text-zinc-400"
+          }`}
+        >
+          Semua ({streamers.length})
+        </button>
       </div>
 
-      <div className="border-b border-white/5 p-2.5">
+      <div className="border-b border-white/10 p-2">
         <input
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search streamers..."
-          className="min-h-11 w-full border border-white/10 bg-zinc-950/80 px-3 py-2 font-mono text-xs text-white placeholder:text-zinc-600 focus:border-blue-800/50 focus:outline-none"
+          placeholder="Cari streamer..."
+          className="min-h-10 w-full border border-white/10 bg-zinc-950 px-3 py-2 font-mono text-xs text-white placeholder:text-zinc-600 focus:border-blue-700/50 focus:outline-none"
         />
       </div>
 
-      <div className="flex max-h-[360px] flex-col gap-1.5 overflow-y-auto p-2.5 sm:max-h-[420px] lg:max-h-none lg:flex-1">
+      <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto p-2 sm:max-h-[400px] lg:max-h-none lg:flex-1">
         {loading && streamers.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-800/30 border-t-blue-500" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-800/30 border-t-blue-500" />
             <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-              Scanning live channels...
+              Scanning...
             </p>
           </div>
         )}
@@ -86,18 +99,30 @@ export default function StreamerSidebar({
             <button
               type="button"
               onClick={onRetry}
-              className="mt-3 min-h-10 border border-blue-800/40 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-blue-300 transition-colors hover:bg-blue-950/40"
+              className="mt-3 min-h-10 border border-blue-800/40 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-blue-300 hover:bg-blue-950/40"
             >
               Retry
             </button>
           </div>
         )}
 
-        {!loading && filteredStreamers.length === 0 && streamers.length > 0 && (
-          <p className="py-6 text-center font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-            {filter === "LIVE" ? "No live streamers" : "No streamers found"}
-          </p>
-        )}
+        {!loading &&
+          filter === "LIVE" &&
+          filteredStreamers.length === 0 &&
+          streamers.length > 0 && (
+            <p className="py-8 text-center font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+              {"// Belum ada yang live"}
+            </p>
+          )}
+
+        {!loading &&
+          filter === "ALL" &&
+          filteredStreamers.length === 0 &&
+          streamers.length > 0 && (
+            <p className="py-8 text-center font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+              No streamers found
+            </p>
+          )}
 
         {filteredStreamers.map((streamer) => (
           <StreamerListItem

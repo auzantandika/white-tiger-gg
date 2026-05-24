@@ -64,3 +64,10 @@ body {
 .live-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+.monitor-panel {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 32px rgba(37, 99, 235, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}

@@ -11,16 +11,16 @@ import {
   resizeAssignments,
   syncLiveAssignments,
 } from "@/lib/stream-layout";
-import {
-  formatLastChecked,
-  formatScanBatchMessage,
-} from "@/lib/stream-status";
 import type { GridLayout, LiveStreamer, YoutubeLiveResponse } from "@/lib/types";
 import LayoutButton from "./LayoutButton";
+import StreamEmptyState from "./StreamEmptyState";
+import StreamRefreshBar from "./StreamRefreshBar";
 import StreamerSidebar from "./StreamerSidebar";
+import StreamingMonitorHeader from "./StreamingMonitorHeader";
 import StreamSlot from "./StreamSlot";
 
 const REFRESH_INTERVAL_MS = 300_000;
+const REFRESH_SECONDS = 300;
 
 function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
   return streamers
@@ -187,88 +187,61 @@ export default function StreamingMonitor() {
   );
 
   const liveCount = liveIds.length;
+  const showScanning = loading && streamers.length === 0;
+  const showNoLive = !loading && !error && liveCount === 0;
+  const showGrid = !showScanning && !showNoLive;
 
   return (
-    <section aria-label="Streaming monitor" className="flex min-w-0 flex-col gap-3">
-      <div className="flex flex-col gap-1 border-b border-white/5 pb-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="font-mono text-xs uppercase tracking-[0.25em] text-blue-400/70">
-            {"// STREAM NETWORK"}
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Multi-stream live monitor
-          </p>
-        </div>
-        <div className="text-left sm:text-right">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-            {slotCount} active slots
-          </p>
-          {!loading && !error && (
-            <div className="space-y-0.5">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-blue-400/70">
-                {liveCount} live now
-              </p>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-                Last checked {formatLastChecked(lastCheckedAt)}
-              </p>
-              {scannedCount !== null && (
-                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-                  {scannedCount} checked this cycle
-                </p>
-              )}
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-700">
-                {formatScanBatchMessage(scanBatchSize)}
-              </p>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-700">
-                Full list may take several minutes to update.
-              </p>
-            </div>
-          )}
+    <section
+      aria-label="Streaming monitor"
+      className="monitor-panel flex min-w-0 flex-col overflow-hidden rounded border border-white/10 bg-black/80"
+    >
+      <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+        <StreamingMonitorHeader
+          liveCount={liveCount}
+          totalChannels={streamers.length}
+          refreshSeconds={REFRESH_SECONDS}
+        />
+      </div>
+
+      <div className="mt-3 flex min-w-0 items-center gap-2 border-y border-white/10 bg-black/50 px-2 py-2 sm:px-3">
+        <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-600 sm:inline">
+          Layout
+        </span>
+        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {LAYOUT_OPTIONS.map((option) => (
+            <LayoutButton
+              key={option}
+              layout={option}
+              active={layout === option}
+              onClick={() => handleLayoutChange(option)}
+            />
+          ))}
         </div>
       </div>
 
       {error && (
-        <div className="rounded border border-blue-900/50 bg-blue-950/20 px-4 py-3">
+        <div className="mx-3 mt-3 border border-blue-900/40 bg-blue-950/20 px-3 py-2 sm:mx-4">
           <p className="font-mono text-[10px] uppercase tracking-widest text-blue-400">
             Live Status Error
           </p>
-          <p className="mt-1 text-sm text-zinc-400">{error}</p>
+          <p className="mt-1 text-xs text-zinc-400">{error}</p>
           <button
             type="button"
             onClick={() => fetchLiveStatus(true)}
-            className="mt-2 min-h-10 border border-blue-800/40 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-blue-300 transition-colors hover:bg-blue-950/40"
+            className="mt-2 min-h-9 border border-blue-800/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-blue-300 hover:bg-blue-950/40"
           >
             Retry
           </button>
         </div>
       )}
 
-      <div className="flex min-w-0 flex-col gap-4 lg:flex-row">
+      <div className="flex min-w-0 flex-col gap-3 p-3 sm:p-4 lg:flex-row">
         <div className="min-w-0 flex-1">
-          <div className="mb-3 flex min-w-0 items-center gap-2 border border-white/10 bg-black/50 p-2">
-            <span className="shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-600">
-              Layout
-            </span>
-            <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {LAYOUT_OPTIONS.map((option) => (
-                <LayoutButton
-                  key={option}
-                  label={option}
-                  active={layout === option}
-                  onClick={() => handleLayoutChange(option)}
-                />
-              ))}
-            </div>
-          </div>
-
-          {!loading && !error && liveCount === 0 ? (
-            <div className="flex min-h-[200px] items-center justify-center border border-white/10 bg-black/40 px-4 py-12">
-              <p className="font-mono text-sm uppercase tracking-widest text-zinc-500">
-                No live streams detected.
-              </p>
-            </div>
-          ) : (
-            <div className={`grid min-w-0 gap-2 ${gridCols}`}>
+          {showScanning && <StreamEmptyState variant="scanning" />}
+          {showNoLive && <StreamEmptyState variant="no-live" />}
+          {showGrid && (
+            <div className={`grid min-w-0 gap-1.5 sm:gap-2 ${gridCols}`}>
               {assignments.map((streamerId, index) => (
                 <StreamSlot
                   key={`slot-${index}`}
@@ -294,9 +267,16 @@ export default function StreamingMonitor() {
         />
       </div>
 
-      <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
-        Live streams auto-load · status refreshes every 5 minutes
-      </p>
+      {!error && (
+        <div className="px-3 pb-3 sm:px-4 sm:pb-4">
+          <StreamRefreshBar
+            lastCheckedAt={lastCheckedAt}
+            scannedCount={scannedCount}
+            scanBatchSize={scanBatchSize}
+            refreshSeconds={REFRESH_SECONDS}
+          />
+        </div>
+      )}
     </section>
   );
 }

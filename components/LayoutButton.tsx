@@ -1,11 +1,21 @@
+import type { GridLayout } from "@/lib/types";
+
 interface LayoutButtonProps {
-  label: string;
+  layout: GridLayout;
   active: boolean;
   onClick: () => void;
 }
 
+function formatLayoutLabel(layout: GridLayout): string {
+  if (layout === "ALL") {
+    return "ALL";
+  }
+
+  return layout.replace("x", "×");
+}
+
 export default function LayoutButton({
-  label,
+  layout,
   active,
   onClick,
 }: LayoutButtonProps) {
@@ -13,13 +23,14 @@ export default function LayoutButton({
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-10 shrink-0 border px-3 py-2 font-mono text-[10px] uppercase tracking-widest transition-all ${
+      aria-pressed={active}
+      className={`min-h-9 shrink-0 border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all sm:min-h-10 sm:px-3 ${
         active
-          ? "border-blue-500/60 bg-blue-950/50 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.25)]"
-          : "border-white/10 bg-black/40 text-zinc-500 hover:border-blue-800/40 hover:text-zinc-300"
+          ? "border-blue-500/70 bg-blue-950/60 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.2)]"
+          : "border-white/10 bg-black/50 text-zinc-500 hover:border-blue-800/50 hover:text-zinc-300"
       }`}
     >
-      {label}
+      {formatLayoutLabel(layout)}
     </button>
   );
 }

@@ -5,6 +5,7 @@ export const LAYOUT_OPTIONS: GridLayout[] = [
   "2x1",
   "2x2",
   "3x2",
+  "3x3",
   "4x2",
   "ALL",
 ];
@@ -17,6 +18,7 @@ export const FIXED_LAYOUT_SLOTS: Record<
   "2x1": { slots: 2, cols: "grid-cols-1 md:grid-cols-2" },
   "2x2": { slots: 4, cols: "grid-cols-1 md:grid-cols-2" },
   "3x2": { slots: 6, cols: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" },
+  "3x3": { slots: 9, cols: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" },
   "4x2": { slots: 8, cols: "grid-cols-1 md:grid-cols-2 lg:grid-cols-4" },
 };
 
