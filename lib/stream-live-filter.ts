@@ -36,6 +36,10 @@ export interface NormalizedYoutubeLiveResponse {
   scannedCount: number;
   scanBatchSize: number;
   totalChannels: number;
+  recheckedLiveCount: number;
+  livePrioritized: boolean;
+  scannedStreamerIds: string[];
+  skippedStreamerIds: string[];
 }
 
 export function normalizeYoutubeLiveResponse(
@@ -49,5 +53,13 @@ export function normalizeYoutubeLiveResponse(
     scannedCount: data.scannedCount ?? 0,
     scanBatchSize: data.scanBatchSize ?? DEFAULT_SCAN_BATCH_SIZE,
     totalChannels: data.totalChannels ?? streamers.length,
+    recheckedLiveCount: data.recheckedLiveCount ?? 0,
+    livePrioritized: data.livePrioritized ?? false,
+    scannedStreamerIds: Array.isArray(data.scannedStreamerIds)
+      ? data.scannedStreamerIds
+      : [],
+    skippedStreamerIds: Array.isArray(data.skippedStreamerIds)
+      ? data.skippedStreamerIds
+      : [],
   };
 }

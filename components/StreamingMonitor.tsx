@@ -67,6 +67,8 @@ export default function StreamingMonitor() {
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [scannedCount, setScannedCount] = useState(0);
+  const [recheckedLiveCount, setRecheckedLiveCount] = useState(0);
+  const [livePrioritized, setLivePrioritized] = useState(false);
   const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
 
   const [manuallyClearedIds, setManuallyClearedIds] = useState<Set<string>>(
@@ -99,6 +101,8 @@ export default function StreamingMonitor() {
           streamersLength: normalized.streamers.length,
           totalChannels: normalized.totalChannels,
           scannedCount: normalized.scannedCount,
+          recheckedLiveCount: normalized.recheckedLiveCount,
+          livePrioritized: normalized.livePrioritized,
           scanBatchSize: normalized.scanBatchSize,
           lastCheckedAt: normalized.lastCheckedAt,
         });
@@ -108,6 +112,8 @@ export default function StreamingMonitor() {
       setTotalChannels(normalized.totalChannels);
       setLastCheckedAt(normalized.lastCheckedAt);
       setScannedCount(normalized.scannedCount);
+      setRecheckedLiveCount(normalized.recheckedLiveCount);
+      setLivePrioritized(normalized.livePrioritized);
       setError(null);
       setHasFetchedOnce(true);
     } catch (err) {
@@ -361,6 +367,8 @@ export default function StreamingMonitor() {
           refreshCountdown={refreshCountdown}
           lastCheckedAt={lastCheckedAt}
           scannedCount={scannedCount}
+          recheckedLiveCount={recheckedLiveCount}
+          livePrioritized={livePrioritized}
           sidebarVisible={sidebarVisible}
           onToggleSidebar={handleToggleSidebar}
         />

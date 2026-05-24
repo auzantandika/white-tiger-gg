@@ -1,3 +1,4 @@
+import { isConfirmedLive } from "@/lib/stream-live-filter";
 import type { StreamerChannel } from "./types";
 import {
   ensureScanCache,
@@ -12,33 +13,87 @@ import {
   type ChannelLiveResult,
 } from "./youtube-server";
 
+export interface ScanBatchSelection {
+  toScan: StreamerChannel[];
+  nextCursor: number;
+  recheckedLiveCount: number;
+  livePrioritized: boolean;
+  scannedStreamerIds: string[];
+  skippedStreamerIds: string[];
+  scanBatchSize: number;
+}
+
+export interface RotatingLiveScanResult {
+  results: ChannelLiveResult[];
+  scannedCount: number;
+  recheckedLiveCount: number;
+  scanBatchSize: number;
+  livePrioritized: boolean;
+  scannedStreamerIds: string[];
+  skippedStreamerIds: string[];
+}
+
 export function selectScanBatch(
   channels: StreamerChannel[],
   batchSize: number,
-): { toScan: StreamerChannel[]; nextCursor: number } {
+): ScanBatchSelection {
   if (batchSize >= channels.length) {
-    return { toScan: channels, nextCursor: 0 };
+    ensureScanCache(channels);
+    const streamersById = getCachedStreamerMap();
+    const recheckedLiveCount = channels.filter((channel) => {
+      const cached = streamersById.get(channel.id);
+      return cached ? isConfirmedLive(cached) : false;
+    }).length;
+
+    return {
+      toScan: channels,
+      nextCursor: 0,
+      recheckedLiveCount,
+      livePrioritized: recheckedLiveCount > 0,
+      scannedStreamerIds: channels.map((channel) => channel.id),
+      skippedStreamerIds: [],
+      scanBatchSize: batchSize,
+    };
   }
 
   ensureScanCache(channels);
 
   const streamersById = getCachedStreamerMap();
-  const liveChannels = channels.filter(
-    (channel) => streamersById.get(channel.id)?.status === "LIVE",
-  );
-  const otherChannels = channels.filter(
-    (channel) => streamersById.get(channel.id)?.status !== "LIVE",
-  );
+  const liveChannels = channels.filter((channel) => {
+    const cached = streamersById.get(channel.id);
+    return cached ? isConfirmedLive(cached) : false;
+  });
+  const otherChannels = channels.filter((channel) => {
+    const cached = streamersById.get(channel.id);
+    return !cached || !isConfirmedLive(cached);
+  });
 
   const toScan: StreamerChannel[] = [];
   const seen = new Set<string>();
 
   for (const channel of liveChannels) {
-    if (toScan.length >= batchSize) {
-      break;
-    }
     toScan.push(channel);
     seen.add(channel.id);
+  }
+
+  const recheckedLiveCount = liveChannels.length;
+  const livePrioritized = recheckedLiveCount > 0;
+
+  if (recheckedLiveCount > batchSize) {
+    const scannedStreamerIds = toScan.map((channel) => channel.id);
+    const skippedStreamerIds = channels
+      .filter((channel) => !seen.has(channel.id))
+      .map((channel) => channel.id);
+
+    return {
+      toScan,
+      nextCursor: getScanCursor(),
+      recheckedLiveCount,
+      livePrioritized,
+      scannedStreamerIds,
+      skippedStreamerIds,
+      scanBatchSize: batchSize,
+    };
   }
 
   let cursor = getScanCursor();
@@ -66,20 +121,32 @@ export function selectScanBatch(
 
   const nextCursor =
     otherChannels.length > 0 ? cursor % otherChannels.length : getScanCursor();
+  const scannedStreamerIds = toScan.map((channel) => channel.id);
+  const skippedStreamerIds = channels
+    .filter((channel) => !seen.has(channel.id))
+    .map((channel) => channel.id);
 
-  return { toScan, nextCursor };
+  return {
+    toScan,
+    nextCursor,
+    recheckedLiveCount,
+    livePrioritized,
+    scannedStreamerIds,
+    skippedStreamerIds,
+    scanBatchSize: batchSize,
+  };
 }
 
 export async function runRotatingLiveScan(
   channels: StreamerChannel[],
   apiKey: string,
   options: { batchSize?: number; resolveHandles?: boolean } = {},
-): Promise<{ results: ChannelLiveResult[]; scannedCount: number }> {
+): Promise<RotatingLiveScanResult> {
   const batchSize = options.batchSize ?? getScanBatchSize();
   const resolveHandles = options.resolveHandles ?? false;
-  const { toScan, nextCursor } = selectScanBatch(channels, batchSize);
+  const selection = selectScanBatch(channels, batchSize);
 
-  const rawResults = await runBatchedChannelLiveScan(toScan, apiKey, {
+  const rawResults = await runBatchedChannelLiveScan(selection.toScan, apiKey, {
     resolveHandles,
   });
 
@@ -90,7 +157,15 @@ export async function runRotatingLiveScan(
   }));
 
   updateCachedStreamers(results.map(({ streamer }) => streamer));
-  setScanCursor(nextCursor);
+  setScanCursor(selection.nextCursor);
 
-  return { results, scannedCount: toScan.length };
+  return {
+    results,
+    scannedCount: selection.toScan.length,
+    recheckedLiveCount: selection.recheckedLiveCount,
+    scanBatchSize: selection.scanBatchSize,
+    livePrioritized: selection.livePrioritized,
+    scannedStreamerIds: selection.scannedStreamerIds,
+    skippedStreamerIds: selection.skippedStreamerIds,
+  };
 }

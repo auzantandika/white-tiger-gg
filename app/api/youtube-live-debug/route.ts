@@ -29,14 +29,11 @@ export async function GET() {
   }
 
   try {
-    const { results, scannedCount } = await runRotatingLiveScan(
-      STREAMER_CHANNELS,
-      apiKey,
-      {
-        batchSize: Math.min(DEBUG_SCAN_BATCH_SIZE, getScanBatchSize()),
-        resolveHandles: true,
-      },
-    );
+    const scan = await runRotatingLiveScan(STREAMER_CHANNELS, apiKey, {
+      batchSize: Math.min(DEBUG_SCAN_BATCH_SIZE, getScanBatchSize()),
+      resolveHandles: true,
+    });
+    const { results, scannedCount } = scan;
 
     const debugById = new Map(
       results.map(({ streamer, debug }) => [streamer.id, debug]),
@@ -52,6 +49,11 @@ export async function GET() {
         warning:
           "Debug endpoint uses YouTube API quota. Do not refresh repeatedly.",
         scannedCount,
+        recheckedLiveCount: scan.recheckedLiveCount,
+        scanBatchSize: scan.scanBatchSize,
+        livePrioritized: scan.livePrioritized,
+        scannedStreamerIds: scan.scannedStreamerIds,
+        skippedStreamerIds: scan.skippedStreamerIds,
         streamers,
       },
       {

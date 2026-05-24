@@ -36,13 +36,10 @@ export async function GET() {
   }
 
   try {
-    const { results, scannedCount } = await runRotatingLiveScan(
-      STREAMER_CHANNELS,
-      apiKey,
-      {
-        batchSize: getScanBatchSize(),
-      },
-    );
+    const scan = await runRotatingLiveScan(STREAMER_CHANNELS, apiKey, {
+      batchSize: getScanBatchSize(),
+    });
+    const { results, scannedCount } = scan;
 
     const debugById = new Map(
       results.map(({ streamer, debug }) => [streamer.id, debug]),
@@ -64,7 +61,11 @@ export async function GET() {
       totalChannels: STREAMER_CHANNELS.length,
       lastCheckedAt,
       scannedCount,
-      scanBatchSize: getScanBatchSize(),
+      scanBatchSize: scan.scanBatchSize,
+      recheckedLiveCount: scan.recheckedLiveCount,
+      livePrioritized: scan.livePrioritized,
+      scannedStreamerIds: scan.scannedStreamerIds,
+      skippedStreamerIds: scan.skippedStreamerIds,
     };
 
     return NextResponse.json(payload, {

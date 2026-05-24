@@ -7,6 +7,8 @@ interface StreamingMonitorHeaderProps {
   refreshCountdown: number;
   lastCheckedAt?: string | null;
   scannedCount?: number | null;
+  recheckedLiveCount?: number | null;
+  livePrioritized?: boolean;
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
   showSidebarToggle?: boolean;
@@ -43,6 +45,8 @@ export default function StreamingMonitorHeader({
   refreshCountdown,
   lastCheckedAt = null,
   scannedCount = null,
+  recheckedLiveCount = null,
+  livePrioritized = false,
   sidebarVisible,
   onToggleSidebar,
   showSidebarToggle = true,
@@ -98,6 +102,15 @@ export default function StreamingMonitorHeader({
           <span className="text-zinc-800">
             {" · "}
             {scannedCount} checked this cycle
+          </span>
+        )}
+        {livePrioritized && (
+          <span className="text-zinc-800">
+            {" · "}
+            live streams rechecked every cycle
+            {recheckedLiveCount !== null && recheckedLiveCount > 0
+              ? ` (${recheckedLiveCount})`
+              : ""}
           </span>
         )}
       </p>

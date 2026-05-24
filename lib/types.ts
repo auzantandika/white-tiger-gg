@@ -45,6 +45,10 @@ export interface YoutubeLiveResponse {
   lastCheckedAt?: string;
   scannedCount?: number;
   scanBatchSize?: number;
+  recheckedLiveCount?: number;
+  livePrioritized?: boolean;
+  scannedStreamerIds?: string[];
+  skippedStreamerIds?: string[];
 }
 
 export interface Player {
