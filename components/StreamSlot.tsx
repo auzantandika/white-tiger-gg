@@ -1,4 +1,5 @@
 import type { LiveStreamer } from "@/lib/types";
+import { getStreamerStatusLabel } from "@/lib/stream-status";
 
 interface StreamSlotProps {
   index: number;
@@ -99,11 +100,13 @@ export default function StreamSlot({
                   : "text-zinc-500"
               }`}
             >
-              {streamer.status === "UNKNOWN" ? "API LIMITED" : streamer.status}
+              {streamer.status === "UNKNOWN"
+                ? getStreamerStatusLabel(streamer)
+                : streamer.status}
             </span>
             <p className="text-sm font-semibold text-white">{streamer.name}</p>
             <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">
-              Stream offline
+              {streamer.status === "UNKNOWN" ? "Status pending scan" : "Stream offline"}
             </p>
             {hasChannel && (
               <a

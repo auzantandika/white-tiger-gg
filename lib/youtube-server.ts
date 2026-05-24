@@ -66,6 +66,7 @@ export interface ChannelLiveResult {
 
 export interface LiveDetectionOptions {
   enableFallback?: boolean;
+  resolveHandles?: boolean;
 }
 
 function normalizeHandle(handle: string): string {
@@ -126,7 +127,10 @@ function offlineStreamer(channel: StreamerChannel): LiveStreamer {
   };
 }
 
-function unknownStreamer(channel: StreamerChannel): LiveStreamer {
+function unknownStreamer(
+  channel: StreamerChannel,
+  errorMessage?: string,
+): LiveStreamer {
   return {
     id: channel.id,
     name: channel.name,
@@ -135,6 +139,7 @@ function unknownStreamer(channel: StreamerChannel): LiveStreamer {
     videoId: "",
     title: "",
     thumbnail: "",
+    ...(errorMessage ? { errorMessage } : {}),
   };
 }
 
@@ -189,6 +194,15 @@ export interface ResolveStreamerChannelResult {
   channelHandle: string;
   channelIdField: string;
   errorMessage?: string;
+}
+
+export function getStreamerChannelIdOnly(streamer: StreamerChannel): string | null {
+  const configuredId = streamer.channelId?.trim();
+  if (configuredId) {
+    return configuredId;
+  }
+
+  return extractChannelIdFromUrl(streamer.channelUrl);
 }
 
 export async function resolveStreamerChannel(
@@ -424,6 +438,7 @@ export async function getChannelLiveStatus(
   options: LiveDetectionOptions = {},
 ): Promise<ChannelLiveResult> {
   const enableFallback = options.enableFallback ?? isFallbackEnabled();
+  const resolveHandles = options.resolveHandles ?? true;
 
   const debug: StreamerLiveDebug = {
     channelHandle: channel.channelHandle ?? extractHandleFromUrl(channel.channelUrl) ?? "",
@@ -436,31 +451,50 @@ export async function getChannelLiveStatus(
   };
 
   try {
-    const resolved = await resolveStreamerChannel(channel, apiKey);
-    debug.resolveStatus = resolved.status;
-    debug.resolvedChannelId = resolved.channelId ?? "";
-    debug.channelHandle = resolved.channelHandle;
-    debug.channelId = resolved.channelIdField || debug.channelId;
+    let resolvedChannelId: string | null = null;
 
-    if (resolved.errorMessage) {
-      debug.errorMessage = resolved.errorMessage;
+    if (resolveHandles) {
+      const resolved = await resolveStreamerChannel(channel, apiKey);
+      debug.resolveStatus = resolved.status;
+      debug.resolvedChannelId = resolved.channelId ?? "";
+      debug.channelHandle = resolved.channelHandle;
+      debug.channelId = resolved.channelIdField || debug.channelId;
+      resolvedChannelId = resolved.channelId;
+
+      if (resolved.errorMessage) {
+        debug.errorMessage = resolved.errorMessage;
+      }
+    } else {
+      resolvedChannelId = getStreamerChannelIdOnly(channel);
+      debug.resolveStatus = resolvedChannelId ? "direct" : "missing_channel_id";
+      debug.resolvedChannelId = resolvedChannelId ?? "";
+      debug.channelId = resolvedChannelId ?? debug.channelId;
+
+      if (!resolvedChannelId) {
+        debug.errorMessage = "Missing channelId";
+        debug.primaryLiveSearchStatus = "skipped";
+        return {
+          streamer: unknownStreamer(channel, "Missing channelId"),
+          debug,
+        };
+      }
     }
 
-    if (!resolved.channelId) {
+    if (!resolvedChannelId) {
       debug.primaryLiveSearchStatus = "skipped";
-      if (isQuotaExceededError(resolved.errorMessage)) {
-        return { streamer: unknownStreamer(channel), debug };
+      if (isQuotaExceededError(debug.errorMessage)) {
+        return { streamer: unknownStreamer(channel, debug.errorMessage), debug };
       }
       return { streamer: offlineStreamer(channel), debug };
     }
 
-    const primaryResult = await fetchPrimaryLiveVideo(resolved.channelId, apiKey);
+    const primaryResult = await fetchPrimaryLiveVideo(resolvedChannelId, apiKey);
     debug.primaryLiveSearchStatus = primaryResult.status;
 
     if (primaryResult.errorMessage) {
       debug.errorMessage = primaryResult.errorMessage;
       if (isQuotaExceededError(primaryResult.errorMessage)) {
-        return { streamer: unknownStreamer(channel), debug };
+        return { streamer: unknownStreamer(channel, primaryResult.errorMessage), debug };
       }
       return { streamer: offlineStreamer(channel), debug };
     }
@@ -484,14 +518,14 @@ export async function getChannelLiveStatus(
       return { streamer: offlineStreamer(channel), debug };
     }
 
-    const fallbackResult = await fetchFallbackLiveVideo(resolved.channelId, apiKey);
+    const fallbackResult = await fetchFallbackLiveVideo(resolvedChannelId, apiKey);
     debug.fallbackSearchStatus = fallbackResult.status;
     debug.videoCheckedCount = fallbackResult.videoCheckedCount;
 
     if (fallbackResult.errorMessage) {
       debug.errorMessage = fallbackResult.errorMessage;
       if (isQuotaExceededError(fallbackResult.errorMessage)) {
-        return { streamer: unknownStreamer(channel), debug };
+        return { streamer: unknownStreamer(channel, fallbackResult.errorMessage), debug };
       }
       return { streamer: offlineStreamer(channel), debug };
     }
@@ -520,7 +554,7 @@ export async function getChannelLiveStatus(
       debug.fallbackSearchStatus === "pending" ? "error" : debug.fallbackSearchStatus;
     debug.errorMessage = "Unexpected error while checking YouTube live status";
 
-    return { streamer: unknownStreamer(channel), debug };
+    return { streamer: unknownStreamer(channel, debug.errorMessage), debug };
   }
 }
 
@@ -530,7 +564,10 @@ export async function getAllChannelsLiveStatus(
   options: LiveDetectionOptions = {},
 ): Promise<ChannelLiveResult[]> {
   return processWithConcurrency(channels, REQUEST_CONCURRENCY, (channel) =>
-    getChannelLiveStatus(channel, apiKey, options),
+    getChannelLiveStatus(channel, apiKey, {
+      ...options,
+      resolveHandles: options.resolveHandles ?? true,
+    }),
   );
 }
 

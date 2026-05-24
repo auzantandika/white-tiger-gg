@@ -1,4 +1,5 @@
 import { getStreamerInitial } from "@/lib/streamers";
+import { getStreamerStatusLabel } from "@/lib/stream-status";
 import type { LiveStreamer } from "@/lib/types";
 
 interface StreamerListItemProps {
@@ -12,7 +13,7 @@ export default function StreamerListItem({
 }: StreamerListItemProps) {
   const isLive = streamer.status === "LIVE";
   const isUnknown = streamer.status === "UNKNOWN";
-  const statusLabel = isUnknown ? "API LIMITED" : streamer.status;
+  const statusLabel = getStreamerStatusLabel(streamer);
 
   return (
     <div className="flex min-w-0 items-center gap-2.5 border border-white/5 bg-zinc-950/60 px-2.5 py-2.5 transition-colors hover:border-blue-800/30 hover:bg-zinc-950">

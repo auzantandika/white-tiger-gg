@@ -30,6 +30,7 @@ export async function GET() {
   try {
     const results = await getAllChannelsLiveStatus(STREAMER_CHANNELS, apiKey, {
       enableFallback: isFallbackEnabled(),
+      resolveHandles: true,
     });
 
     const streamers = results.map(({ streamer, debug }) =>

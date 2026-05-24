@@ -11,12 +11,13 @@ import {
   resizeAssignments,
   syncLiveAssignments,
 } from "@/lib/stream-layout";
+import { formatLastChecked } from "@/lib/stream-status";
 import type { GridLayout, LiveStreamer, YoutubeLiveResponse } from "@/lib/types";
 import LayoutButton from "./LayoutButton";
 import StreamerSidebar from "./StreamerSidebar";
 import StreamSlot from "./StreamSlot";
 
-const REFRESH_INTERVAL_MS = 120_000;
+const REFRESH_INTERVAL_MS = 300_000;
 
 function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
   return streamers
@@ -34,6 +35,7 @@ export default function StreamingMonitor() {
   const [streamers, setStreamers] = useState<LiveStreamer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
 
   const [manuallyClearedIds, setManuallyClearedIds] = useState<Set<string>>(
     () => new Set(),
@@ -52,6 +54,7 @@ export default function StreamingMonitor() {
 
       const data = (await response.json()) as YoutubeLiveResponse;
       setStreamers(data.streamers);
+      setLastCheckedAt(data.lastCheckedAt ?? null);
       setError(null);
     } catch (err) {
       setError(
@@ -194,9 +197,14 @@ export default function StreamingMonitor() {
             {slotCount} active slots
           </p>
           {!loading && !error && (
-            <p className="font-mono text-[10px] uppercase tracking-widest text-blue-400/70">
-              {liveCount} live now
-            </p>
+            <>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-blue-400/70">
+                {liveCount} live now
+              </p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                Last checked {formatLastChecked(lastCheckedAt)}
+              </p>
+            </>
           )}
         </div>
       </div>
@@ -269,7 +277,7 @@ export default function StreamingMonitor() {
       </div>
 
       <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
-        Live streams auto-load · status refreshes every 120 seconds
+        Live streams auto-load · status refreshes every 5 minutes
       </p>
     </section>
   );

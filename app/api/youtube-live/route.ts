@@ -3,11 +3,17 @@ import { STREAMER_CHANNELS } from "@/lib/streamers";
 import type { YoutubeLiveResponse } from "@/lib/types";
 import {
   getCachedLiveStreamers,
+  getMergedStreamers,
   setCachedLiveStreamers,
+  setLastResponseAt,
 } from "@/lib/youtube-live-cache";
+import { runRotatingLiveScan } from "@/lib/youtube-live-scan";
+import {
+  getLiveCacheControlHeader,
+  getScanBatchSize,
+} from "@/lib/youtube-config";
 import {
   attachDebugFields,
-  getAllChannelsLiveStatus,
   isFallbackEnabled,
   isQuotaExceededError,
 } from "@/lib/youtube-server";
@@ -18,6 +24,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const apiKey = process.env.YOUTUBE_API_KEY;
   const isDevelopment = process.env.NODE_ENV === "development";
+  const cacheControl = getLiveCacheControlHeader();
 
   if (!apiKey) {
     return NextResponse.json(
@@ -29,45 +36,54 @@ export async function GET() {
     );
   }
 
-  const cached = getCachedLiveStreamers();
-  if (cached) {
-    return NextResponse.json(
-      { streamers: cached },
+  try {
+    const { results, scannedCount } = await runRotatingLiveScan(
+      STREAMER_CHANNELS,
+      apiKey,
       {
-        headers: {
-          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240",
-          "X-Live-Cache": "hit",
-        },
+        enableFallback: isFallbackEnabled(),
+        batchSize: getScanBatchSize(),
       },
     );
-  }
 
-  try {
-    const results = await getAllChannelsLiveStatus(STREAMER_CHANNELS, apiKey, {
-      enableFallback: isFallbackEnabled(),
-    });
-
-    const streamers = results.map(({ streamer, debug }) =>
-      attachDebugFields(streamer, debug, isDevelopment),
+    const debugById = new Map(
+      results.map(({ streamer, debug }) => [streamer.id, debug]),
     );
 
+    const streamers = getMergedStreamers(STREAMER_CHANNELS).map((streamer) => {
+      const debug = debugById.get(streamer.id);
+      if (isDevelopment && debug) {
+        return attachDebugFields(streamer, debug, true);
+      }
+      return streamer;
+    });
+    const lastCheckedAt = new Date().toISOString();
+    setLastResponseAt(lastCheckedAt);
     setCachedLiveStreamers(streamers);
 
-    const payload: YoutubeLiveResponse = { streamers };
+    const payload: YoutubeLiveResponse = {
+      streamers,
+      lastCheckedAt,
+      scannedCount,
+    };
 
     return NextResponse.json(payload, {
       headers: {
-        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240",
+        "Cache-Control": cacheControl,
+        "X-Live-Scan-Count": String(scannedCount),
       },
     });
   } catch (error) {
     const cached = getCachedLiveStreamers();
     if (cached) {
       return NextResponse.json(
-        { streamers: cached },
+        {
+          streamers: cached,
+          lastCheckedAt: new Date().toISOString(),
+        } satisfies YoutubeLiveResponse,
         {
           headers: {
-            "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240",
+            "Cache-Control": cacheControl,
             "X-Live-Cache": "hit",
           },
         },

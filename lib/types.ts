@@ -24,10 +24,13 @@ export interface LiveStreamer {
   fallbackSearchStatus?: string;
   videoCheckedCount?: number;
   errorMessage?: string;
+  lastCheckedAt?: string;
 }
 
 export interface YoutubeLiveResponse {
   streamers: LiveStreamer[];
+  lastCheckedAt?: string;
+  scannedCount?: number;
 }
 
 export interface Player {
