@@ -8,6 +8,8 @@ import { getScanBatchSize } from "@/lib/youtube-config";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const DEBUG_SCAN_BATCH_SIZE = 12;
+
 /**
  * Temporary debug endpoint for inspecting YouTube live detection in production.
  * Remove this route or protect it (auth, IP allowlist, env flag) once live
@@ -30,7 +32,10 @@ export async function GET() {
     const { results, scannedCount } = await runRotatingLiveScan(
       STREAMER_CHANNELS,
       apiKey,
-      { batchSize: getScanBatchSize(), resolveHandles: true },
+      {
+        batchSize: Math.min(DEBUG_SCAN_BATCH_SIZE, getScanBatchSize()),
+        resolveHandles: true,
+      },
     );
 
     const debugById = new Map(

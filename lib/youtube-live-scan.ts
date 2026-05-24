@@ -8,12 +8,9 @@ import {
 } from "./youtube-live-cache";
 import { getScanBatchSize } from "./youtube-config";
 import {
-  getChannelLiveStatus,
-  processWithConcurrency,
+  runBatchedChannelLiveScan,
   type ChannelLiveResult,
 } from "./youtube-server";
-
-const SCAN_CONCURRENCY = 4;
 
 export function selectScanBatch(
   channels: StreamerChannel[],
@@ -82,11 +79,9 @@ export async function runRotatingLiveScan(
   const resolveHandles = options.resolveHandles ?? false;
   const { toScan, nextCursor } = selectScanBatch(channels, batchSize);
 
-  const rawResults = await processWithConcurrency(toScan, SCAN_CONCURRENCY, (channel) =>
-    getChannelLiveStatus(channel, apiKey, {
-      resolveHandles,
-    }),
-  );
+  const rawResults = await runBatchedChannelLiveScan(toScan, apiKey, {
+    resolveHandles,
+  });
 
   const checkedAt = new Date().toISOString();
   const results = rawResults.map((result) => ({
