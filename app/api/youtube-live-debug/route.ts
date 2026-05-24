@@ -1,25 +1,32 @@
 import { NextResponse } from "next/server";
-import { readCachedYoutubeLiveResponse } from "@/lib/youtube-live-read";
-import { getCachedLiveData, getCachedLiveDataAge } from "@/lib/youtube-live-store";
+import { readYoutubeLiveResponse } from "@/lib/youtube-live-read";
+import {
+  fetchVpsHealthSummary,
+  getLiveDataServiceUrl,
+} from "@/lib/vps-live-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Debug endpoint — reads cached scan data only (no YouTube API calls).
- * Trigger scans via /api/cron/scan-youtube-live.
+ * Debug endpoint — reads live data from VPS when configured, otherwise local cache.
+ * YouTube scans run on the VPS service (or via /api/cron/scan-youtube-live when VPS is not set).
  */
 export async function GET() {
   try {
-    const snapshot = await getCachedLiveData();
-    const cacheAgeSeconds = await getCachedLiveDataAge();
-    const payload = await readCachedYoutubeLiveResponse();
+    const payload = await readYoutubeLiveResponse();
+    const vpsUrl = getLiveDataServiceUrl();
+    const vpsHealth = vpsUrl ? await fetchVpsHealthSummary().catch(() => null) : null;
 
     return NextResponse.json(
       {
-        warning:
-          "Debug endpoint reads cached data only. Scans run via /api/cron/scan-youtube-live.",
-        storeProvider: snapshot ? payload.storeProvider : "none",
+        warning: vpsUrl
+          ? "Debug endpoint reads live data from the VPS service. Scans run on VPS."
+          : "Debug endpoint reads cached data only. Scans run via /api/cron/scan-youtube-live.",
+        liveDataServiceUrl: vpsUrl,
+        vpsHealth,
+        storeProvider: payload.storeProvider ?? (vpsUrl ? "vps-file" : "none"),
+        source: payload.source,
         liveCount: payload.liveCount,
         scannedCount: payload.scannedCount,
         recheckedLiveCount: payload.recheckedLiveCount,
@@ -30,10 +37,7 @@ export async function GET() {
         lastCheckedAt: payload.lastCheckedAt,
         nextScanAt: payload.nextScanAt,
         cacheStale: payload.cacheStale,
-        cacheAgeSeconds,
-        scanCursor: snapshot?.scanCursor ?? 0,
-        dailyQuotaBudget: snapshot?.dailyQuotaBudget,
-        quotaSafetyLimit: snapshot?.quotaSafetyLimit,
+        cacheAgeSeconds: payload.cacheAgeSeconds,
         streamers: payload.streamers,
       },
       {
@@ -46,7 +50,7 @@ export async function GET() {
     const message =
       error instanceof Error
         ? error.message
-        : "Failed to read cached YouTube live status";
+        : "Failed to read YouTube live status";
 
     return NextResponse.json({ error: message }, { status: 502 });
   }

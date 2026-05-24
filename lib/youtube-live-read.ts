@@ -64,6 +64,18 @@ export function isSnapshotStale(
   return Date.now() - scannedAtMs > cacheSeconds * 1000;
 }
 
+export async function readYoutubeLiveResponse(): Promise<YoutubeLiveResponse> {
+  const { getLiveDataServiceUrl, fetchVpsLiveDataResponse } = await import(
+    "@/lib/vps-live-data"
+  );
+
+  if (getLiveDataServiceUrl()) {
+    return fetchVpsLiveDataResponse();
+  }
+
+  return readCachedYoutubeLiveResponse();
+}
+
 export async function readCachedYoutubeLiveResponse(): Promise<YoutubeLiveResponse> {
   const cacheSeconds = getLiveCacheSeconds();
   const snapshot = await getCachedLiveData();

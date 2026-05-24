@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readCachedYoutubeLiveResponse } from "@/lib/youtube-live-read";
+import { readYoutubeLiveResponse } from "@/lib/youtube-live-read";
 import { getLiveCacheControlHeader } from "@/lib/youtube-config";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export async function GET() {
   const cacheControl = getLiveCacheControlHeader();
 
   try {
-    const payload = await readCachedYoutubeLiveResponse();
+    const payload = await readYoutubeLiveResponse();
 
     return NextResponse.json(payload, {
       headers: {
@@ -22,7 +22,7 @@ export async function GET() {
     const message =
       error instanceof Error
         ? error.message
-        : "Failed to read cached YouTube live status";
+        : "Failed to read YouTube live status";
 
     return NextResponse.json({ error: message }, { status: 502 });
   }

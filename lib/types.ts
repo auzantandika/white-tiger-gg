@@ -55,7 +55,7 @@ export interface YoutubeLiveResponse {
   cacheStale?: boolean;
   cacheSeconds?: number;
   cacheAgeSeconds?: number | null;
-  source?: "cache";
+  source?: "cache" | "vps";
   storeProvider?: string;
   quotaUsedEstimate?: number;
   dailyQuotaBudget?: number;
