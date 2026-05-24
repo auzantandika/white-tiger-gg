@@ -11,6 +11,8 @@ export default function StreamerListItem({
   onAssign,
 }: StreamerListItemProps) {
   const isLive = streamer.status === "LIVE";
+  const isUnknown = streamer.status === "UNKNOWN";
+  const statusLabel = isUnknown ? "API LIMITED" : streamer.status;
 
   return (
     <div className="flex min-w-0 items-center gap-2.5 border border-white/5 bg-zinc-950/60 px-2.5 py-2.5 transition-colors hover:border-blue-800/30 hover:bg-zinc-950">
@@ -30,10 +32,14 @@ export default function StreamerListItem({
         <p className="truncate text-sm font-medium text-white">{streamer.name}</p>
         <span
           className={`font-mono text-[9px] uppercase tracking-widest ${
-            isLive ? "text-blue-400" : "text-zinc-600"
+            isLive
+              ? "text-blue-400"
+              : isUnknown
+                ? "text-amber-500/80"
+                : "text-zinc-600"
           }`}
         >
-          {streamer.status}
+          {statusLabel}
         </span>
       </div>
 

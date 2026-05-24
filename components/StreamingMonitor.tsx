@@ -16,7 +16,7 @@ import LayoutButton from "./LayoutButton";
 import StreamerSidebar from "./StreamerSidebar";
 import StreamSlot from "./StreamSlot";
 
-const REFRESH_INTERVAL_MS = 60_000;
+const REFRESH_INTERVAL_MS = 120_000;
 
 function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
   return streamers
@@ -269,7 +269,7 @@ export default function StreamingMonitor() {
       </div>
 
       <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
-        Live streams auto-load · status refreshes every 60 seconds
+        Live streams auto-load · status refreshes every 120 seconds
       </p>
     </section>
   );

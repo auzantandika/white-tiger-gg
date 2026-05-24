@@ -1,6 +1,8 @@
 import type { LiveStreamer, StreamerChannel } from "./types";
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
+const REQUEST_CONCURRENCY = 4;
+const REQUEST_DELAY_MS = 200;
 
 interface YouTubeChannelResponse {
   items?: Array<{ id: string }>;
@@ -62,6 +64,10 @@ export interface ChannelLiveResult {
   debug: StreamerLiveDebug;
 }
 
+export interface LiveDetectionOptions {
+  enableFallback?: boolean;
+}
+
 function normalizeHandle(handle: string): string {
   return handle.startsWith("@") ? handle.slice(1) : handle;
 }
@@ -80,6 +86,19 @@ function parseYouTubeError(body: unknown, httpStatus: number): string {
   }
 
   return `YouTube API request failed with status ${httpStatus}`;
+}
+
+export function isQuotaExceededError(message?: string): boolean {
+  if (!message) {
+    return false;
+  }
+
+  const lower = message.toLowerCase();
+  return lower.includes("quota exceeded") || lower.includes("exceeded your quota");
+}
+
+export function isFallbackEnabled(): boolean {
+  return process.env.YOUTUBE_ENABLE_FALLBACK === "true";
 }
 
 function thumbnailFromSnippet(snippet?: {
@@ -107,6 +126,18 @@ function offlineStreamer(channel: StreamerChannel): LiveStreamer {
   };
 }
 
+function unknownStreamer(channel: StreamerChannel): LiveStreamer {
+  return {
+    id: channel.id,
+    name: channel.name,
+    channelUrl: channel.channelUrl,
+    status: "UNKNOWN",
+    videoId: "",
+    title: "",
+    thumbnail: "",
+  };
+}
+
 export function extractChannelIdFromUrl(url: string): string | null {
   const match = url.match(/\/channel\/(UC[\w-]+)/i);
   return match?.[1] ?? null;
@@ -128,7 +159,7 @@ async function resolveHandleToChannelId(
   const forHandle = normalizeHandle(handle);
   const url = buildApiUrl("/channels", { part: "id", forHandle }, apiKey);
 
-  const response = await fetch(url, { next: { revalidate: 60 } });
+  const response = await fetch(url, { cache: "no-store" });
   const body = (await response.json()) as YouTubeChannelResponse;
 
   if (!response.ok) {
@@ -238,7 +269,7 @@ async function fetchPrimaryLiveVideo(
     apiKey,
   );
 
-  const response = await fetch(url, { next: { revalidate: 60 } });
+  const response = await fetch(url, { cache: "no-store" });
   const body = (await response.json()) as YouTubeSearchResponse;
 
   if (!response.ok) {
@@ -296,7 +327,7 @@ async function fetchFallbackLiveVideo(
     apiKey,
   );
 
-  const searchResponse = await fetch(searchUrl, { next: { revalidate: 60 } });
+  const searchResponse = await fetch(searchUrl, { cache: "no-store" });
   const searchBody = (await searchResponse.json()) as YouTubeSearchResponse;
 
   if (!searchResponse.ok) {
@@ -326,7 +357,7 @@ async function fetchFallbackLiveVideo(
     apiKey,
   );
 
-  const videosResponse = await fetch(videosUrl, { next: { revalidate: 60 } });
+  const videosResponse = await fetch(videosUrl, { cache: "no-store" });
   const videosBody = (await videosResponse.json()) as YouTubeVideosResponse;
 
   if (!videosResponse.ok) {
@@ -355,10 +386,45 @@ async function fetchFallbackLiveVideo(
   return { live: null, status: "offline", videoCheckedCount: videoIds.length };
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function processWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function runWorker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await worker(items[currentIndex]);
+      if (REQUEST_DELAY_MS > 0) {
+        await sleep(REQUEST_DELAY_MS);
+      }
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    () => runWorker(),
+  );
+
+  await Promise.all(workers);
+  return results;
+}
+
 export async function getChannelLiveStatus(
   channel: StreamerChannel,
   apiKey: string,
+  options: LiveDetectionOptions = {},
 ): Promise<ChannelLiveResult> {
+  const enableFallback = options.enableFallback ?? isFallbackEnabled();
+
   const debug: StreamerLiveDebug = {
     channelHandle: channel.channelHandle ?? extractHandleFromUrl(channel.channelUrl) ?? "",
     channelId: channel.channelId ?? extractChannelIdFromUrl(channel.channelUrl) ?? "",
@@ -382,6 +448,9 @@ export async function getChannelLiveStatus(
 
     if (!resolved.channelId) {
       debug.primaryLiveSearchStatus = "skipped";
+      if (isQuotaExceededError(resolved.errorMessage)) {
+        return { streamer: unknownStreamer(channel), debug };
+      }
       return { streamer: offlineStreamer(channel), debug };
     }
 
@@ -390,6 +459,9 @@ export async function getChannelLiveStatus(
 
     if (primaryResult.errorMessage) {
       debug.errorMessage = primaryResult.errorMessage;
+      if (isQuotaExceededError(primaryResult.errorMessage)) {
+        return { streamer: unknownStreamer(channel), debug };
+      }
       return { streamer: offlineStreamer(channel), debug };
     }
 
@@ -408,12 +480,19 @@ export async function getChannelLiveStatus(
       };
     }
 
+    if (!enableFallback) {
+      return { streamer: offlineStreamer(channel), debug };
+    }
+
     const fallbackResult = await fetchFallbackLiveVideo(resolved.channelId, apiKey);
     debug.fallbackSearchStatus = fallbackResult.status;
     debug.videoCheckedCount = fallbackResult.videoCheckedCount;
 
     if (fallbackResult.errorMessage) {
       debug.errorMessage = fallbackResult.errorMessage;
+      if (isQuotaExceededError(fallbackResult.errorMessage)) {
+        return { streamer: unknownStreamer(channel), debug };
+      }
       return { streamer: offlineStreamer(channel), debug };
     }
 
@@ -441,8 +520,18 @@ export async function getChannelLiveStatus(
       debug.fallbackSearchStatus === "pending" ? "error" : debug.fallbackSearchStatus;
     debug.errorMessage = "Unexpected error while checking YouTube live status";
 
-    return { streamer: offlineStreamer(channel), debug };
+    return { streamer: unknownStreamer(channel), debug };
   }
+}
+
+export async function getAllChannelsLiveStatus(
+  channels: StreamerChannel[],
+  apiKey: string,
+  options: LiveDetectionOptions = {},
+): Promise<ChannelLiveResult[]> {
+  return processWithConcurrency(channels, REQUEST_CONCURRENCY, (channel) =>
+    getChannelLiveStatus(channel, apiKey, options),
+  );
 }
 
 export type LiveStreamerWithDebug = LiveStreamer & Partial<StreamerLiveDebug>;

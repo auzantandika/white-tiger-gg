@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { STREAMER_CHANNELS } from "@/lib/streamers";
-import { attachDebugFields, getChannelLiveStatus } from "@/lib/youtube-server";
+import {
+  attachDebugFields,
+  getAllChannelsLiveStatus,
+  isFallbackEnabled,
+} from "@/lib/youtube-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,16 +28,20 @@ export async function GET() {
   }
 
   try {
-    const results = await Promise.all(
-      STREAMER_CHANNELS.map((channel) => getChannelLiveStatus(channel, apiKey)),
-    );
+    const results = await getAllChannelsLiveStatus(STREAMER_CHANNELS, apiKey, {
+      enableFallback: isFallbackEnabled(),
+    });
 
     const streamers = results.map(({ streamer, debug }) =>
       attachDebugFields(streamer, debug, true),
     );
 
     return NextResponse.json(
-      { streamers },
+      {
+        warning:
+          "Debug endpoint uses more quota. Do not refresh repeatedly.",
+        streamers,
+      },
       {
         headers: {
           "Cache-Control": "no-store",

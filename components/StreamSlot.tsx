@@ -92,8 +92,14 @@ export default function StreamSlot({
 
         {streamer && !hasVideo && (
           <div className="flex flex-col items-center gap-3 px-4 text-center">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-              {streamer.status}
+            <span
+              className={`font-mono text-[10px] uppercase tracking-widest ${
+                streamer.status === "UNKNOWN"
+                  ? "text-amber-500/80"
+                  : "text-zinc-500"
+              }`}
+            >
+              {streamer.status === "UNKNOWN" ? "API LIMITED" : streamer.status}
             </span>
             <p className="text-sm font-semibold text-white">{streamer.name}</p>
             <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">

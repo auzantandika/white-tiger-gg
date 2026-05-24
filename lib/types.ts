@@ -1,4 +1,4 @@
-export type StreamStatus = "LIVE" | "OFFLINE";
+export type StreamStatus = "LIVE" | "OFFLINE" | "UNKNOWN";
 
 export interface StreamerChannel {
   id: string;
