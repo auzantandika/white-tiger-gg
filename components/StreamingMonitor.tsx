@@ -2,20 +2,27 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  assignStreamerToSlot,
-  buildInitialAssignments,
   FIXED_LAYOUT_SLOTS,
   getAllLayoutCols,
   getSlotCountForLayout,
   LAYOUT_OPTIONS,
-  resizeAssignments,
-  syncLiveAssignments,
 } from "@/lib/stream-layout";
 import {
   getLiveStreamerIds,
   getLiveStreamers,
+  isConfirmedLive,
   normalizeYoutubeLiveResponse,
 } from "@/lib/stream-live-filter";
+import {
+  assignStreamerToSlot,
+  buildInitialSlotAssignments,
+  getSlotReactKey,
+  resolveSlotForDisplay,
+  resizeSlotAssignments,
+  syncLiveSlotAssignments,
+  type StreamSlotState,
+  validateSlotAssignments,
+} from "@/lib/stream-slots";
 import type { GridLayout, LiveStreamer, YoutubeLiveResponse } from "@/lib/types";
 import FocusedStreamView from "./FocusedStreamView";
 import LayoutButton from "./LayoutButton";
@@ -48,7 +55,7 @@ export default function StreamingMonitor() {
   const [hasUserSelectedLayout, setHasUserSelectedLayout] = useState(false);
   const [userLayout, setUserLayout] = useState<GridLayout>("ALL");
   const [assignmentOverrides, setAssignmentOverrides] = useState<
-    (string | null)[] | null
+    StreamSlotState[] | null
   >(null);
   const [selectedSlot, setSelectedSlot] = useState(0);
   const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
@@ -178,29 +185,35 @@ export default function StreamingMonitor() {
   }, [manuallyClearedIds, liveIds]);
 
   const assignments = useMemo(() => {
-    const base = assignmentOverrides ?? buildInitialAssignments(slotCount);
+    const base = assignmentOverrides ?? buildInitialSlotAssignments(slotCount);
 
-    return syncLiveAssignments(
-      resizeAssignments(base, slotCount),
+    return syncLiveSlotAssignments(
+      resizeSlotAssignments(base, slotCount),
       slotCount,
-      liveIds,
+      liveStreamers,
       activeSkipIds,
     );
-  }, [assignmentOverrides, slotCount, liveIds, activeSkipIds]);
+  }, [assignmentOverrides, slotCount, liveStreamers, activeSkipIds]);
 
   const streamerMap = useMemo(
     () => new Map(streamers.map((streamer) => [streamer.id, streamer])),
     [streamers],
   );
 
+  useEffect(() => {
+    validateSlotAssignments(assignments, streamerMap);
+  }, [assignments, streamerMap]);
+
   const focusedStreamer = useMemo(() => {
     if (!focusedStreamId) {
       return null;
     }
+
     const streamer = streamerMap.get(focusedStreamId);
-    if (!streamer?.videoId) {
+    if (!streamer || !isConfirmedLive(streamer)) {
       return null;
     }
+
     return streamer;
   }, [focusedStreamId, streamerMap]);
 
@@ -249,23 +262,27 @@ export default function StreamingMonitor() {
       const count = getSlotCountForLayout(nextLayout, liveIds);
 
       setAssignmentOverrides((current) =>
-        syncLiveAssignments(
-          resizeAssignments(current ?? assignments, count),
+        syncLiveSlotAssignments(
+          resizeSlotAssignments(current ?? assignments, count),
           count,
-          liveIds,
+          liveStreamers,
           activeSkipIds,
         ),
       );
       setSelectedSlot(0);
     },
-    [assignments, liveIds, activeSkipIds],
+    [assignments, liveIds, liveStreamers, activeSkipIds],
   );
 
   const handleAssignStreamer = useCallback(
-    (streamerId: string) => {
-      setManuallyClearedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(streamerId);
+    (streamer: LiveStreamer) => {
+      if (!isConfirmedLive(streamer)) {
+        return;
+      }
+
+      setManuallyClearedIds((previous) => {
+        const next = new Set(previous);
+        next.delete(streamer.id);
         return next;
       });
 
@@ -273,7 +290,7 @@ export default function StreamingMonitor() {
         assignStreamerToSlot(
           current ?? assignments,
           slotCount,
-          streamerId,
+          streamer,
           selectedSlot,
         ),
       );
@@ -283,17 +300,17 @@ export default function StreamingMonitor() {
 
   const handleClearSlot = useCallback(
     (index: number) => {
-      const clearedId = assignments[index];
+      const clearedSlot = assignments[index];
 
-      if (clearedId) {
-        setManuallyClearedIds((prev) => new Set(prev).add(clearedId));
-        if (focusedStreamId === clearedId) {
+      if (clearedSlot) {
+        setManuallyClearedIds((previous) => new Set(previous).add(clearedSlot.streamerId));
+        if (focusedStreamId === clearedSlot.streamerId) {
           setFocusedStreamId(null);
         }
       }
 
       setAssignmentOverrides((current) => {
-        const next = [...resizeAssignments(current ?? assignments, slotCount)];
+        const next = [...resizeSlotAssignments(current ?? assignments, slotCount)];
         next[index] = null;
         return next;
       });
@@ -395,6 +412,7 @@ export default function StreamingMonitor() {
           {showNoLive && <StreamEmptyState variant="no-live" />}
           {focusedStreamer && (
             <FocusedStreamView
+              key={`${focusedStreamer.id}-${focusedStreamer.videoId}`}
               streamer={focusedStreamer}
               onBack={handleExitFocus}
               isExpanded={streamAreaExpanded}
@@ -411,33 +429,30 @@ export default function StreamingMonitor() {
                   : ""
               }`}
             >
-              {assignments.map((streamerId, index) => (
-                <StreamSlot
-                  key={`slot-${index}`}
-                  streamer={
-                    streamerId ? (streamerMap.get(streamerId) ?? null) : null
-                  }
-                  isSelected={selectedSlot === index}
-                  isLarge={largeSlots}
-                  isExpanded={streamAreaExpanded}
-                  layout={layout}
-                  onSelect={() => {
-                    setSelectedSlot(index);
-                    if (
-                      streamerId &&
-                      streamerMap.get(streamerId)?.videoId
-                    ) {
-                      handleFocusStream(streamerId);
+              {assignments.map((slot, index) => {
+                const streamer = resolveSlotForDisplay(slot, streamerMap);
+
+                return (
+                  <StreamSlot
+                    key={getSlotReactKey(slot, index)}
+                    streamer={streamer}
+                    isSelected={selectedSlot === index}
+                    isLarge={largeSlots}
+                    isExpanded={streamAreaExpanded}
+                    layout={layout}
+                    onSelect={() => {
+                      setSelectedSlot(index);
+                      if (streamer?.videoId) {
+                        handleFocusStream(streamer.id);
+                      }
+                    }}
+                    onClear={() => handleClearSlot(index)}
+                    onFocus={
+                      streamer ? () => handleFocusStream(streamer.id) : undefined
                     }
-                  }}
-                  onClear={() => handleClearSlot(index)}
-                  onFocus={
-                    streamerId
-                      ? () => handleFocusStream(streamerId)
-                      : undefined
-                  }
-                />
-              ))}
+                  />
+                );
+              })}
             </div>
           )}
         </div>

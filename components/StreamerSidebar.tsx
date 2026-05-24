@@ -9,7 +9,7 @@ interface StreamerSidebarProps {
   streamers: LiveStreamer[];
   loading: boolean;
   error: string | null;
-  onAssignStreamer: (streamerId: string) => void;
+  onAssignStreamer: (streamer: LiveStreamer) => void;
   onRetry: () => void;
 }
 
@@ -129,7 +129,7 @@ export default function StreamerSidebar({
           <StreamerListItem
             key={streamer.id}
             streamer={streamer}
-            onAssign={() => onAssignStreamer(streamer.id)}
+            onAssign={() => onAssignStreamer(streamer)}
           />
         ))}
       </div>

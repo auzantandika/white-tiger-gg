@@ -56,6 +56,7 @@ export default function FocusedStreamView({
         className={`relative aspect-video w-full overflow-hidden border border-blue-800/50 bg-black transition-[min-height] duration-300 ease-in-out ${playerMinHeight}`}
       >
         <iframe
+          key={`${streamer.id}-${streamer.videoId}`}
           src={buildEmbedUrl(streamer.videoId)}
           title={`${streamer.name} live stream`}
           className="absolute inset-0 h-full w-full"

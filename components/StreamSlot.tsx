@@ -112,6 +112,7 @@ export default function StreamSlot({
         {streamer && hasVideo && (
           <>
             <iframe
+              key={`${streamer.id}-${streamer.videoId}`}
               src={buildEmbedUrl(streamer.videoId)}
               title={`${streamer.name} live stream`}
               className="absolute inset-0 h-full w-full"
