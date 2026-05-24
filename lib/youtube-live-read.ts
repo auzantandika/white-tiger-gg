@@ -19,6 +19,7 @@ function createUnknownStreamer(channel: StreamerChannel): LiveStreamer {
     videoId: "",
     title: "",
     thumbnail: "",
+    errorMessage: UNSCANNED_LIVE_MESSAGE,
   };
 }
 

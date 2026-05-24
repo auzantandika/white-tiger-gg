@@ -351,7 +351,7 @@ export default function StreamingMonitor() {
     !loading &&
     !error &&
     hasFetchedOnce &&
-    statusMessage === UNSCANNED_LIVE_MESSAGE;
+    (statusMessage === UNSCANNED_LIVE_MESSAGE || !lastCheckedAt);
   const showScanning =
     !error && !showPendingScan && (loading || !hasFetchedOnce);
   const showNoLive =

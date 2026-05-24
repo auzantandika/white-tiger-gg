@@ -34,16 +34,10 @@ export async function GET(request: Request) {
       {
         ok: true,
         scannedCount: scan.scannedCount,
-        recheckedLiveCount: scan.recheckedLiveCount,
-        scanBatchSize: scan.scanBatchSize,
-        livePrioritized: scan.livePrioritized,
-        scannedStreamerIds: scan.scannedStreamerIds,
-        skippedStreamerIds: scan.skippedStreamerIds,
         liveCount: scan.snapshot.liveCount,
-        nextScanAt: scan.snapshot.nextScanAt,
-        lastCheckedAt: scan.snapshot.lastCheckedAt,
-        scanCursor: scan.snapshot.scanCursor,
         totalChannels: scan.snapshot.totalChannels,
+        lastCheckedAt: scan.snapshot.lastCheckedAt,
+        nextScanAt: scan.snapshot.nextScanAt,
       },
       {
         headers: {
