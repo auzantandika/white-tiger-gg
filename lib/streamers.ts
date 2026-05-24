@@ -282,6 +282,21 @@ export const STREAMER_CHANNELS: StreamerChannel[] = [
     channelId: "UCuMuq1gINc_t-GfJtXXcyXw",
     channelUrl: "https://www.youtube.com/channel/UCuMuq1gINc_t-GfJtXXcyXw",
   },
+  {
+    id: "aang-mahesa",
+    name: "Aang Mahesa",
+    channelUrl: "https://youtube.com/@aangmahesa047",
+  },
+  {
+    id: "ucup-pablo",
+    name: "Ucup Pablo",
+    channelUrl: "https://youtube.com/@ucuppablo",
+  },
+  {
+    id: "mat4-ggg",
+    name: "Mat4 GGG",
+    channelUrl: "https://www.youtube.com/@Mat4GGG",
+  },
 ];
 
 export function getStreamerInitial(name: string): string {
