@@ -1,106 +1,29 @@
 import { NextResponse } from "next/server";
-import { STREAMER_CHANNELS } from "@/lib/streamers";
-import type { YoutubeLiveResponse } from "@/lib/types";
-import {
-  getCachedLiveStreamers,
-  getMergedStreamers,
-  setCachedLiveStreamers,
-  setLastResponseAt,
-} from "@/lib/youtube-live-cache";
-import { runRotatingLiveScan } from "@/lib/youtube-live-scan";
-import {
-  getLiveCacheControlHeader,
-  getScanBatchSize,
-} from "@/lib/youtube-config";
-import {
-  attachDebugFields,
-  isQuotaExceededError,
-} from "@/lib/youtube-server";
+import { readCachedYoutubeLiveResponse } from "@/lib/youtube-live-read";
+import { getLiveCacheControlHeader } from "@/lib/youtube-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  const isDevelopment = process.env.NODE_ENV === "development";
   const cacheControl = getLiveCacheControlHeader();
 
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        error:
-          "YouTube API key is not configured. Set YOUTUBE_API_KEY in .env.local for local development or in Vercel Project Settings → Environment Variables for production.",
-      },
-      { status: 503 },
-    );
-  }
-
   try {
-    const scan = await runRotatingLiveScan(STREAMER_CHANNELS, apiKey, {
-      batchSize: getScanBatchSize(),
-    });
-    const { results, scannedCount } = scan;
-
-    const debugById = new Map(
-      results.map(({ streamer, debug }) => [streamer.id, debug]),
-    );
-
-    const streamers = getMergedStreamers(STREAMER_CHANNELS).map((streamer) => {
-      const debug = debugById.get(streamer.id);
-      if (isDevelopment && debug) {
-        return attachDebugFields(streamer, debug, true);
-      }
-      return streamer;
-    });
-    const lastCheckedAt = new Date().toISOString();
-    setLastResponseAt(lastCheckedAt);
-    setCachedLiveStreamers(streamers);
-
-    const payload: YoutubeLiveResponse = {
-      streamers,
-      totalChannels: STREAMER_CHANNELS.length,
-      lastCheckedAt,
-      scannedCount,
-      scanBatchSize: scan.scanBatchSize,
-      recheckedLiveCount: scan.recheckedLiveCount,
-      livePrioritized: scan.livePrioritized,
-      scannedStreamerIds: scan.scannedStreamerIds,
-      skippedStreamerIds: scan.skippedStreamerIds,
-    };
+    const payload = await readCachedYoutubeLiveResponse();
 
     return NextResponse.json(payload, {
       headers: {
         "Cache-Control": cacheControl,
-        "X-Live-Scan-Count": String(scannedCount),
+        "X-Live-Data-Source": payload.source ?? "cache",
+        "X-Live-Scan-Count": String(payload.scannedCount ?? 0),
       },
     });
   } catch (error) {
-    const cached = getCachedLiveStreamers();
-    if (cached) {
-      return NextResponse.json(
-        {
-          streamers: cached,
-          totalChannels: STREAMER_CHANNELS.length,
-          lastCheckedAt: new Date().toISOString(),
-          scannedCount: 0,
-          scanBatchSize: getScanBatchSize(),
-        } satisfies YoutubeLiveResponse,
-        {
-          headers: {
-            "Cache-Control": cacheControl,
-            "X-Live-Cache": "hit",
-          },
-        },
-      );
-    }
-
     const message =
       error instanceof Error
         ? error.message
-        : "Failed to fetch YouTube live status";
+        : "Failed to read cached YouTube live status";
 
-    const status = isQuotaExceededError(message) ? 429 : 502;
-
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

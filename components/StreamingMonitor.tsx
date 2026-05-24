@@ -7,6 +7,7 @@ import {
   getSlotCountForLayout,
   LAYOUT_OPTIONS,
 } from "@/lib/stream-layout";
+import { UNSCANNED_LIVE_MESSAGE } from "@/lib/constants";
 import {
   getLiveStreamerIds,
   getLiveStreamers,
@@ -32,7 +33,7 @@ import StreamerSidebar from "./StreamerSidebar";
 import StreamingMonitorHeader from "./StreamingMonitorHeader";
 import StreamSlot from "./StreamSlot";
 
-const REFRESH_SECONDS = 300;
+const DEFAULT_CACHE_SECONDS = 600;
 
 function isLargeLayout(
   layout: GridLayout,
@@ -60,7 +61,10 @@ export default function StreamingMonitor() {
   const [selectedSlot, setSelectedSlot] = useState(0);
   const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [refreshCountdown, setRefreshCountdown] = useState(REFRESH_SECONDS);
+  const [refreshCountdown, setRefreshCountdown] = useState(DEFAULT_CACHE_SECONDS);
+  const [cacheSeconds, setCacheSeconds] = useState(DEFAULT_CACHE_SECONDS);
+  const [cacheStale, setCacheStale] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [streamers, setStreamers] = useState<LiveStreamer[]>([]);
   const [totalChannels, setTotalChannels] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -88,9 +92,7 @@ export default function StreamingMonitor() {
     try {
       const response = await fetch("/api/youtube-live");
       if (!response.ok) {
-        throw new Error(
-          "Live detection unavailable. Please check YouTube API key or quota.",
-        );
+        throw new Error("Live data is temporarily unavailable.");
       }
 
       const data = (await response.json()) as YoutubeLiveResponse;
@@ -114,13 +116,17 @@ export default function StreamingMonitor() {
       setScannedCount(normalized.scannedCount);
       setRecheckedLiveCount(normalized.recheckedLiveCount);
       setLivePrioritized(normalized.livePrioritized);
+      setCacheStale(normalized.cacheStale);
+      setCacheSeconds(normalized.cacheSeconds);
+      setStatusMessage(normalized.message);
+      setRefreshCountdown(normalized.cacheSeconds);
       setError(null);
       setHasFetchedOnce(true);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Live detection unavailable. Please check YouTube API key or quota.",
+          : "Live data is temporarily unavailable.",
       );
     } finally {
       fetchInFlightRef.current = false;
@@ -129,8 +135,8 @@ export default function StreamingMonitor() {
   }, []);
 
   const resetRefreshCountdown = useCallback(() => {
-    setRefreshCountdown(REFRESH_SECONDS);
-  }, []);
+    setRefreshCountdown(cacheSeconds);
+  }, [cacheSeconds]);
 
   const refreshLiveStatus = useCallback(
     async (showLoading = false) => {
@@ -155,7 +161,7 @@ export default function StreamingMonitor() {
       setRefreshCountdown((previous) => {
         if (previous <= 1) {
           void fetchLiveStatus(false);
-          return REFRESH_SECONDS;
+          return cacheSeconds;
         }
         return previous - 1;
       });
@@ -164,7 +170,7 @@ export default function StreamingMonitor() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [fetchLiveStatus]);
+  }, [fetchLiveStatus, cacheSeconds]);
 
   const liveStreamers = useMemo(
     () => getLiveStreamers(streamers),
@@ -339,12 +345,17 @@ export default function StreamingMonitor() {
   const liveCount = liveStreamers.length;
   const channelCount = totalChannels > 0 ? totalChannels : streamers.length;
 
-  const showScanning =
+  const showPendingScan =
+    !loading &&
     !error &&
-    (loading || (streamers.length === 0 && !hasFetchedOnce));
+    hasFetchedOnce &&
+    statusMessage === UNSCANNED_LIVE_MESSAGE;
+  const showScanning =
+    !error && !showPendingScan && (loading || !hasFetchedOnce);
   const showNoLive =
     !loading &&
     !error &&
+    !showPendingScan &&
     hasFetchedOnce &&
     streamers.length > 0 &&
     liveStreamers.length === 0;
@@ -369,6 +380,8 @@ export default function StreamingMonitor() {
           scannedCount={scannedCount}
           recheckedLiveCount={recheckedLiveCount}
           livePrioritized={livePrioritized}
+          cacheStale={cacheStale}
+          cacheSeconds={cacheSeconds}
           sidebarVisible={sidebarVisible}
           onToggleSidebar={handleToggleSidebar}
         />
@@ -417,6 +430,12 @@ export default function StreamingMonitor() {
       >
         <div className="stream-stage min-w-0">
           {showScanning && <StreamEmptyState variant="scanning" />}
+          {showPendingScan && (
+            <StreamEmptyState
+              variant="pending-scan"
+              message={statusMessage ?? undefined}
+            />
+          )}
           {showNoLive && <StreamEmptyState variant="no-live" />}
           {focusedStreamer && (
             <FocusedStreamView

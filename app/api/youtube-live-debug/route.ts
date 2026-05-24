@@ -1,60 +1,34 @@
 import { NextResponse } from "next/server";
-import { STREAMER_CHANNELS } from "@/lib/streamers";
-import { getMergedStreamers } from "@/lib/youtube-live-cache";
-import { attachDebugFields } from "@/lib/youtube-server";
-import { runRotatingLiveScan } from "@/lib/youtube-live-scan";
-import { getScanBatchSize } from "@/lib/youtube-config";
+import { readCachedYoutubeLiveResponse } from "@/lib/youtube-live-read";
+import { readYoutubeLiveSnapshot } from "@/lib/youtube-live-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEBUG_SCAN_BATCH_SIZE = 12;
-
 /**
- * Temporary debug endpoint for inspecting YouTube live detection in production.
- * Remove this route or protect it (auth, IP allowlist, env flag) once live
- * detection issues are resolved.
+ * Debug endpoint — reads cached scan data only (no YouTube API calls).
+ * Trigger scans via /api/cron/scan-youtube-live.
  */
 export async function GET() {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        error:
-          "YouTube API key is not configured. Set YOUTUBE_API_KEY in .env.local for local development or in Vercel Project Settings → Environment Variables for production.",
-      },
-      { status: 503 },
-    );
-  }
-
   try {
-    const scan = await runRotatingLiveScan(STREAMER_CHANNELS, apiKey, {
-      batchSize: Math.min(DEBUG_SCAN_BATCH_SIZE, getScanBatchSize()),
-      resolveHandles: true,
-    });
-    const { results, scannedCount } = scan;
-
-    const debugById = new Map(
-      results.map(({ streamer, debug }) => [streamer.id, debug]),
-    );
-
-    const streamers = getMergedStreamers(STREAMER_CHANNELS).map((streamer) => {
-      const debug = debugById.get(streamer.id);
-      return debug ? attachDebugFields(streamer, debug, true) : streamer;
-    });
+    const snapshot = await readYoutubeLiveSnapshot();
+    const payload = await readCachedYoutubeLiveResponse();
 
     return NextResponse.json(
       {
         warning:
-          "Debug endpoint uses YouTube API quota. Do not refresh repeatedly.",
-        scannedCount,
-        recheckedLiveCount: scan.recheckedLiveCount,
-        scanBatchSize: scan.scanBatchSize,
-        livePrioritized: scan.livePrioritized,
-        scannedStreamerIds: scan.scannedStreamerIds,
-        skippedStreamerIds: scan.skippedStreamerIds,
-        streamers,
+          "Debug endpoint reads cached data only. Scans run via /api/cron/scan-youtube-live.",
+        storeProvider: snapshot ? payload.storeProvider : "none",
+        scannedCount: payload.scannedCount,
+        recheckedLiveCount: payload.recheckedLiveCount,
+        scanBatchSize: payload.scanBatchSize,
+        livePrioritized: payload.livePrioritized,
+        scannedStreamerIds: payload.scannedStreamerIds,
+        skippedStreamerIds: payload.skippedStreamerIds,
+        lastCheckedAt: payload.lastCheckedAt,
+        cacheStale: payload.cacheStale,
+        scanCursor: snapshot?.scanCursor ?? 0,
+        streamers: payload.streamers,
       },
       {
         headers: {
@@ -66,7 +40,7 @@ export async function GET() {
     const message =
       error instanceof Error
         ? error.message
-        : "Failed to fetch YouTube live status";
+        : "Failed to read cached YouTube live status";
 
     return NextResponse.json({ error: message }, { status: 502 });
   }

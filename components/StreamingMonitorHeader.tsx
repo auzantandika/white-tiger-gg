@@ -9,6 +9,8 @@ interface StreamingMonitorHeaderProps {
   scannedCount?: number | null;
   recheckedLiveCount?: number | null;
   livePrioritized?: boolean;
+  cacheStale?: boolean;
+  cacheSeconds?: number | null;
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
   showSidebarToggle?: boolean;
@@ -47,6 +49,8 @@ export default function StreamingMonitorHeader({
   scannedCount = null,
   recheckedLiveCount = null,
   livePrioritized = false,
+  cacheStale = false,
+  cacheSeconds = null,
   sidebarVisible,
   onToggleSidebar,
   showSidebarToggle = true,
@@ -111,6 +115,18 @@ export default function StreamingMonitorHeader({
             {recheckedLiveCount !== null && recheckedLiveCount > 0
               ? ` (${recheckedLiveCount})`
               : ""}
+          </span>
+        )}
+        {cacheStale && (
+          <span className="text-amber-900/80">
+            {" · "}
+            live data may be delayed
+          </span>
+        )}
+        {cacheSeconds !== null && cacheSeconds > 0 && (
+          <span className="text-zinc-800">
+            {" · "}
+            next scan ~{Math.round(cacheSeconds / 60)}m
           </span>
         )}
       </p>

@@ -40,6 +40,9 @@ export interface NormalizedYoutubeLiveResponse {
   livePrioritized: boolean;
   scannedStreamerIds: string[];
   skippedStreamerIds: string[];
+  message: string | null;
+  cacheStale: boolean;
+  cacheSeconds: number;
 }
 
 export function normalizeYoutubeLiveResponse(
@@ -61,5 +64,8 @@ export function normalizeYoutubeLiveResponse(
     skippedStreamerIds: Array.isArray(data.skippedStreamerIds)
       ? data.skippedStreamerIds
       : [],
+    message: data.message ?? null,
+    cacheStale: data.cacheStale ?? false,
+    cacheSeconds: data.cacheSeconds ?? 600,
   };
 }

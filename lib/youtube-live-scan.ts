@@ -1,13 +1,13 @@
 import { isConfirmedLive } from "@/lib/stream-live-filter";
-import type { StreamerChannel } from "./types";
-import {
-  ensureScanCache,
-  getCachedStreamerMap,
-  getScanCursor,
-  setScanCursor,
-  updateCachedStreamers,
-} from "./youtube-live-cache";
+import type { LiveStreamer, StreamerChannel } from "./types";
 import { getScanBatchSize } from "./youtube-config";
+import {
+  buildStreamerMapFromSnapshot,
+  readYoutubeLiveSnapshot,
+  snapshotStreamersFromMap,
+  writeYoutubeLiveSnapshot,
+  type YoutubeLiveScanSnapshot,
+} from "./youtube-live-store";
 import {
   runBatchedChannelLiveScan,
   type ChannelLiveResult,
@@ -31,15 +31,22 @@ export interface RotatingLiveScanResult {
   livePrioritized: boolean;
   scannedStreamerIds: string[];
   skippedStreamerIds: string[];
+  snapshot: YoutubeLiveScanSnapshot;
+}
+
+interface ScanState {
+  scanCursor: number;
+  streamersById: Map<string, LiveStreamer>;
 }
 
 export function selectScanBatch(
   channels: StreamerChannel[],
   batchSize: number,
+  scanState: ScanState,
 ): ScanBatchSelection {
+  const { streamersById } = scanState;
+
   if (batchSize >= channels.length) {
-    ensureScanCache(channels);
-    const streamersById = getCachedStreamerMap();
     const recheckedLiveCount = channels.filter((channel) => {
       const cached = streamersById.get(channel.id);
       return cached ? isConfirmedLive(cached) : false;
@@ -56,9 +63,6 @@ export function selectScanBatch(
     };
   }
 
-  ensureScanCache(channels);
-
-  const streamersById = getCachedStreamerMap();
   const liveChannels = channels.filter((channel) => {
     const cached = streamersById.get(channel.id);
     return cached ? isConfirmedLive(cached) : false;
@@ -87,7 +91,7 @@ export function selectScanBatch(
 
     return {
       toScan,
-      nextCursor: getScanCursor(),
+      nextCursor: scanState.scanCursor,
       recheckedLiveCount,
       livePrioritized,
       scannedStreamerIds,
@@ -96,7 +100,7 @@ export function selectScanBatch(
     };
   }
 
-  let cursor = getScanCursor();
+  let cursor = scanState.scanCursor;
   let offlineAdded = 0;
 
   while (toScan.length < batchSize && otherChannels.length > 0) {
@@ -120,7 +124,7 @@ export function selectScanBatch(
   }
 
   const nextCursor =
-    otherChannels.length > 0 ? cursor % otherChannels.length : getScanCursor();
+    otherChannels.length > 0 ? cursor % otherChannels.length : scanState.scanCursor;
   const scannedStreamerIds = toScan.map((channel) => channel.id);
   const skippedStreamerIds = channels
     .filter((channel) => !seen.has(channel.id))
@@ -144,7 +148,14 @@ export async function runRotatingLiveScan(
 ): Promise<RotatingLiveScanResult> {
   const batchSize = options.batchSize ?? getScanBatchSize();
   const resolveHandles = options.resolveHandles ?? false;
-  const selection = selectScanBatch(channels, batchSize);
+  const existingSnapshot = await readYoutubeLiveSnapshot();
+  const streamersById = buildStreamerMapFromSnapshot(channels, existingSnapshot);
+  const scanState: ScanState = {
+    scanCursor: existingSnapshot?.scanCursor ?? 0,
+    streamersById,
+  };
+
+  const selection = selectScanBatch(channels, batchSize, scanState);
 
   const rawResults = await runBatchedChannelLiveScan(selection.toScan, apiKey, {
     resolveHandles,
@@ -156,8 +167,26 @@ export async function runRotatingLiveScan(
     debug: result.debug,
   }));
 
-  updateCachedStreamers(results.map(({ streamer }) => streamer));
-  setScanCursor(selection.nextCursor);
+  for (const { streamer } of results) {
+    streamersById.set(streamer.id, streamer);
+  }
+
+  const streamers = snapshotStreamersFromMap(channels, streamersById);
+  const snapshot: YoutubeLiveScanSnapshot = {
+    streamers,
+    lastCheckedAt: checkedAt,
+    scannedAt: checkedAt,
+    scannedCount: selection.toScan.length,
+    totalChannels: channels.length,
+    scanBatchSize: selection.scanBatchSize,
+    recheckedLiveCount: selection.recheckedLiveCount,
+    livePrioritized: selection.livePrioritized,
+    scannedStreamerIds: selection.scannedStreamerIds,
+    skippedStreamerIds: selection.skippedStreamerIds,
+    scanCursor: selection.nextCursor,
+  };
+
+  await writeYoutubeLiveSnapshot(snapshot);
 
   return {
     results,
@@ -167,5 +196,6 @@ export async function runRotatingLiveScan(
     livePrioritized: selection.livePrioritized,
     scannedStreamerIds: selection.scannedStreamerIds,
     skippedStreamerIds: selection.skippedStreamerIds,
+    snapshot,
   };
 }

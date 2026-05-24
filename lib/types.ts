@@ -42,13 +42,19 @@ export interface LiveStreamer {
 export interface YoutubeLiveResponse {
   streamers: LiveStreamer[];
   totalChannels?: number;
-  lastCheckedAt?: string;
+  lastCheckedAt?: string | null;
   scannedCount?: number;
   scanBatchSize?: number;
   recheckedLiveCount?: number;
   livePrioritized?: boolean;
   scannedStreamerIds?: string[];
   skippedStreamerIds?: string[];
+  message?: string;
+  cacheStale?: boolean;
+  cacheSeconds?: number;
+  source?: "cache";
+  storeProvider?: string;
+  quotaUsedEstimate?: number;
 }
 
 export interface Player {
