@@ -38,12 +38,6 @@ export const STREAMER_CHANNELS: StreamerChannel[] = [
     channelUrl: "https://www.youtube.com/@zadolfsky",
   },
   {
-    id: "hanekkk",
-    name: "Hanekkk",
-    channelId: "UCt3x5nMhSm8jBrQ4DiH1LJA",
-    channelUrl: "https://www.youtube.com/@hanekkk",
-  },
-  {
     id: "baby-quinnn",
     name: "Baby Quinnn",
     channelId: "UCFiMRXqdFQ15Nk2Zvg-VcOQ",
@@ -300,6 +294,17 @@ export const STREAMER_CHANNELS: StreamerChannel[] = [
     name: "Mat4 GGG",
     channelId: "UC5YcvtNuGr1FEt-qRdNaY0A",
     channelUrl: "https://www.youtube.com/channel/UC5YcvtNuGr1FEt-qRdNaY0A",
+  },
+  {
+    id: "aziel",
+    name: "Aziel",
+    channelUrl: "https://youtube.com/@aziellinimah",
+  },
+  {
+    id: "asyraf",
+    name: "Asyraf",
+    channelId: "UCt2nCdGIct2TRhtuk-x1rOw",
+    channelUrl: "https://www.youtube.com/channel/UCt2nCdGIct2TRhtuk-x1rOw",
   },
 ];
 
