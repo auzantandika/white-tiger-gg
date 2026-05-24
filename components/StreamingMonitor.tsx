@@ -9,7 +9,6 @@ import {
   getSlotCountForLayout,
   LAYOUT_OPTIONS,
   resizeAssignments,
-  suggestLayoutForLiveCount,
   syncLiveAssignments,
 } from "@/lib/stream-layout";
 import type { GridLayout, LiveStreamer, YoutubeLiveResponse } from "@/lib/types";
@@ -27,7 +26,7 @@ function getLiveStreamerIds(streamers: LiveStreamer[]): string[] {
 
 export default function StreamingMonitor() {
   const [hasUserSelectedLayout, setHasUserSelectedLayout] = useState(false);
-  const [userLayout, setUserLayout] = useState<GridLayout>("2x2");
+  const [userLayout, setUserLayout] = useState<GridLayout>("ALL");
   const [assignmentOverrides, setAssignmentOverrides] = useState<
     (string | null)[] | null
   >(null);
@@ -46,10 +45,9 @@ export default function StreamingMonitor() {
     try {
       const response = await fetch("/api/youtube-live");
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(body?.error ?? "Failed to fetch live status");
+        throw new Error(
+          "Live detection unavailable. Please check YouTube API key or quota.",
+        );
       }
 
       const data = (await response.json()) as YoutubeLiveResponse;
@@ -59,7 +57,7 @@ export default function StreamingMonitor() {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to retrieve YouTube live status",
+          : "Live detection unavailable. Please check YouTube API key or quota.",
       );
     } finally {
       setLoading(false);
@@ -84,9 +82,7 @@ export default function StreamingMonitor() {
 
   const liveIds = useMemo(() => getLiveStreamerIds(streamers), [streamers]);
 
-  const layout = hasUserSelectedLayout
-    ? userLayout
-    : suggestLayoutForLiveCount(liveIds.length);
+  const layout = hasUserSelectedLayout ? userLayout : "ALL";
 
   const slotCount = useMemo(
     () => getSlotCountForLayout(layout, liveIds),
@@ -239,20 +235,28 @@ export default function StreamingMonitor() {
             </div>
           </div>
 
-          <div className={`grid min-w-0 gap-2 ${gridCols}`}>
-            {assignments.map((streamerId, index) => (
-              <StreamSlot
-                key={`slot-${index}`}
-                index={index}
-                streamer={
-                  streamerId ? (streamerMap.get(streamerId) ?? null) : null
-                }
-                isSelected={selectedSlot === index}
-                onSelect={() => setSelectedSlot(index)}
-                onClear={() => handleClearSlot(index)}
-              />
-            ))}
-          </div>
+          {!loading && !error && liveCount === 0 ? (
+            <div className="flex min-h-[200px] items-center justify-center border border-white/10 bg-black/40 px-4 py-12">
+              <p className="font-mono text-sm uppercase tracking-widest text-zinc-500">
+                No live streams detected.
+              </p>
+            </div>
+          ) : (
+            <div className={`grid min-w-0 gap-2 ${gridCols}`}>
+              {assignments.map((streamerId, index) => (
+                <StreamSlot
+                  key={`slot-${index}`}
+                  index={index}
+                  streamer={
+                    streamerId ? (streamerMap.get(streamerId) ?? null) : null
+                  }
+                  isSelected={selectedSlot === index}
+                  onSelect={() => setSelectedSlot(index)}
+                  onClear={() => handleClearSlot(index)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <StreamerSidebar

@@ -21,6 +21,25 @@ interface YouTubeSearchResponse {
   error?: YouTubeApiErrorBody;
 }
 
+interface YouTubeVideosResponse {
+  items?: Array<{
+    id?: string;
+    snippet?: {
+      title?: string;
+      liveBroadcastContent?: string;
+      thumbnails?: {
+        medium?: { url?: string };
+        default?: { url?: string };
+      };
+    };
+    liveStreamingDetails?: {
+      actualStartTime?: string;
+      actualEndTime?: string;
+    };
+  }>;
+  error?: YouTubeApiErrorBody;
+}
+
 interface YouTubeApiErrorBody {
   code?: number;
   message?: string;
@@ -29,9 +48,12 @@ interface YouTubeApiErrorBody {
 
 export interface StreamerLiveDebug {
   channelHandle: string;
+  channelId: string;
   resolvedChannelId: string;
   resolveStatus: string;
-  liveSearchStatus: string;
+  primaryLiveSearchStatus: string;
+  fallbackSearchStatus: string;
+  videoCheckedCount: number;
   errorMessage?: string;
 }
 
@@ -58,6 +80,19 @@ function parseYouTubeError(body: unknown, httpStatus: number): string {
   }
 
   return `YouTube API request failed with status ${httpStatus}`;
+}
+
+function thumbnailFromSnippet(snippet?: {
+  thumbnails?: {
+    medium?: { url?: string };
+    default?: { url?: string };
+  };
+}): string {
+  return (
+    snippet?.thumbnails?.medium?.url ??
+    snippet?.thumbnails?.default?.url ??
+    ""
+  );
 }
 
 function offlineStreamer(channel: StreamerChannel): LiveStreamer {
@@ -117,7 +152,7 @@ async function resolveChannelId(
   return { channelId, status: "ok" };
 }
 
-async function fetchLiveVideo(
+async function fetchPrimaryLiveVideo(
   channelId: string,
   apiKey: string,
 ): Promise<{
@@ -159,13 +194,99 @@ async function fetchLiveVideo(
     live: {
       videoId,
       title: item.snippet?.title ?? "",
-      thumbnail:
-        item.snippet?.thumbnails?.medium?.url ??
-        item.snippet?.thumbnails?.default?.url ??
-        "",
+      thumbnail: thumbnailFromSnippet(item.snippet),
     },
     status: "live",
   };
+}
+
+function isVideoLive(item: NonNullable<YouTubeVideosResponse["items"]>[number]): boolean {
+  if (item.snippet?.liveBroadcastContent === "live") {
+    return true;
+  }
+
+  const details = item.liveStreamingDetails;
+  return Boolean(details?.actualStartTime && !details?.actualEndTime);
+}
+
+async function fetchFallbackLiveVideo(
+  channelId: string,
+  apiKey: string,
+): Promise<{
+  live: { videoId: string; title: string; thumbnail: string } | null;
+  status: string;
+  videoCheckedCount: number;
+  errorMessage?: string;
+}> {
+  const searchUrl = buildApiUrl(
+    "/search",
+    {
+      part: "snippet",
+      channelId,
+      type: "video",
+      order: "date",
+      maxResults: "5",
+    },
+    apiKey,
+  );
+
+  const searchResponse = await fetch(searchUrl, { next: { revalidate: 60 } });
+  const searchBody = (await searchResponse.json()) as YouTubeSearchResponse;
+
+  if (!searchResponse.ok) {
+    return {
+      live: null,
+      status: "error",
+      videoCheckedCount: 0,
+      errorMessage: parseYouTubeError(searchBody.error ?? searchBody, searchResponse.status),
+    };
+  }
+
+  const videoIds =
+    searchBody.items
+      ?.map((item) => item.id?.videoId)
+      .filter((id): id is string => Boolean(id)) ?? [];
+
+  if (videoIds.length === 0) {
+    return { live: null, status: "offline", videoCheckedCount: 0 };
+  }
+
+  const videosUrl = buildApiUrl(
+    "/videos",
+    {
+      part: "snippet,liveStreamingDetails",
+      id: videoIds.join(","),
+    },
+    apiKey,
+  );
+
+  const videosResponse = await fetch(videosUrl, { next: { revalidate: 60 } });
+  const videosBody = (await videosResponse.json()) as YouTubeVideosResponse;
+
+  if (!videosResponse.ok) {
+    return {
+      live: null,
+      status: "error",
+      videoCheckedCount: videoIds.length,
+      errorMessage: parseYouTubeError(videosBody.error ?? videosBody, videosResponse.status),
+    };
+  }
+
+  for (const item of videosBody.items ?? []) {
+    if (isVideoLive(item) && item.id) {
+      return {
+        live: {
+          videoId: item.id,
+          title: item.snippet?.title ?? "",
+          thumbnail: thumbnailFromSnippet(item.snippet),
+        },
+        status: "live",
+        videoCheckedCount: videoIds.length,
+      };
+    }
+  }
+
+  return { live: null, status: "offline", videoCheckedCount: videoIds.length };
 }
 
 export async function getChannelLiveStatus(
@@ -173,10 +294,13 @@ export async function getChannelLiveStatus(
   apiKey: string,
 ): Promise<ChannelLiveResult> {
   const debug: StreamerLiveDebug = {
-    channelHandle: channel.channelHandle ?? channel.channelId ?? "",
+    channelHandle: channel.channelHandle ?? "",
+    channelId: channel.channelId ?? "",
     resolvedChannelId: "",
     resolveStatus: "pending",
-    liveSearchStatus: "pending",
+    primaryLiveSearchStatus: "pending",
+    fallbackSearchStatus: "skipped",
+    videoCheckedCount: 0,
   };
 
   try {
@@ -189,19 +313,43 @@ export async function getChannelLiveStatus(
     }
 
     if (!resolved.channelId) {
-      debug.liveSearchStatus = "skipped";
+      debug.primaryLiveSearchStatus = "skipped";
       return { streamer: offlineStreamer(channel), debug };
     }
 
-    const liveResult = await fetchLiveVideo(resolved.channelId, apiKey);
-    debug.liveSearchStatus = liveResult.status;
+    const primaryResult = await fetchPrimaryLiveVideo(resolved.channelId, apiKey);
+    debug.primaryLiveSearchStatus = primaryResult.status;
 
-    if (liveResult.errorMessage) {
-      debug.errorMessage = liveResult.errorMessage;
+    if (primaryResult.errorMessage) {
+      debug.errorMessage = primaryResult.errorMessage;
       return { streamer: offlineStreamer(channel), debug };
     }
 
-    if (!liveResult.live) {
+    if (primaryResult.live) {
+      return {
+        streamer: {
+          id: channel.id,
+          name: channel.name,
+          channelUrl: channel.channelUrl,
+          status: "LIVE",
+          videoId: primaryResult.live.videoId,
+          title: primaryResult.live.title,
+          thumbnail: primaryResult.live.thumbnail,
+        },
+        debug,
+      };
+    }
+
+    const fallbackResult = await fetchFallbackLiveVideo(resolved.channelId, apiKey);
+    debug.fallbackSearchStatus = fallbackResult.status;
+    debug.videoCheckedCount = fallbackResult.videoCheckedCount;
+
+    if (fallbackResult.errorMessage) {
+      debug.errorMessage = fallbackResult.errorMessage;
+      return { streamer: offlineStreamer(channel), debug };
+    }
+
+    if (!fallbackResult.live) {
       return { streamer: offlineStreamer(channel), debug };
     }
 
@@ -211,16 +359,18 @@ export async function getChannelLiveStatus(
         name: channel.name,
         channelUrl: channel.channelUrl,
         status: "LIVE",
-        videoId: liveResult.live.videoId,
-        title: liveResult.live.title,
-        thumbnail: liveResult.live.thumbnail,
+        videoId: fallbackResult.live.videoId,
+        title: fallbackResult.live.title,
+        thumbnail: fallbackResult.live.thumbnail,
       },
       debug,
     };
   } catch {
     debug.resolveStatus = debug.resolveStatus === "pending" ? "error" : debug.resolveStatus;
-    debug.liveSearchStatus =
-      debug.liveSearchStatus === "pending" ? "error" : debug.liveSearchStatus;
+    debug.primaryLiveSearchStatus =
+      debug.primaryLiveSearchStatus === "pending" ? "error" : debug.primaryLiveSearchStatus;
+    debug.fallbackSearchStatus =
+      debug.fallbackSearchStatus === "pending" ? "error" : debug.fallbackSearchStatus;
     debug.errorMessage = "Unexpected error while checking YouTube live status";
 
     return { streamer: offlineStreamer(channel), debug };
@@ -241,9 +391,12 @@ export function attachDebugFields(
   return {
     ...streamer,
     channelHandle: debug.channelHandle,
+    channelId: debug.channelId,
     resolvedChannelId: debug.resolvedChannelId,
     resolveStatus: debug.resolveStatus,
-    liveSearchStatus: debug.liveSearchStatus,
+    primaryLiveSearchStatus: debug.primaryLiveSearchStatus,
+    fallbackSearchStatus: debug.fallbackSearchStatus,
+    videoCheckedCount: debug.videoCheckedCount,
     ...(debug.errorMessage ? { errorMessage: debug.errorMessage } : {}),
   };
 }

@@ -17,9 +17,12 @@ export interface LiveStreamer {
   title: string;
   thumbnail: string;
   channelHandle?: string;
+  channelId?: string;
   resolvedChannelId?: string;
   resolveStatus?: string;
-  liveSearchStatus?: string;
+  primaryLiveSearchStatus?: string;
+  fallbackSearchStatus?: string;
+  videoCheckedCount?: number;
   errorMessage?: string;
 }
 
