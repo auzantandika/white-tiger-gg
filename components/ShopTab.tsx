@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import StreamingMonitorFooter from "./StreamingMonitorFooter";
 
@@ -111,6 +111,18 @@ export default function ShopTab() {
 
   const activeProd = lightboxIndex !== null ? imageProducts[lightboxIndex] : null;
 
+  // Touch swipe support
+  const touchStartX = useRef<number | null>(null);
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 48) { if (dx < 0) goNext(); else goPrev(); }
+    touchStartX.current = null;
+  }, [goNext, goPrev]);
+
   return (
     <div className="flex flex-col gap-6 py-4 sm:py-6">
       <div className="relative w-full overflow-hidden rounded border border-white/10">
@@ -205,7 +217,7 @@ export default function ShopTab() {
 
       <StreamingMonitorFooter />
 
-      {/* Lightbox rendered via portal directly into document.body */}
+      {/* Lightbox — portal to document.body, escapes all parent layout/stacking */}
       {mounted && activeProd && createPortal(
         <div
           role="dialog"
@@ -220,12 +232,14 @@ export default function ShopTab() {
             WebkitBackdropFilter: "blur(4px)",
           }}
           onClick={closeLightbox}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
-          {/* Close — top-right */}
+          {/* Close — fixed top-right, touch-friendly 48×48 */}
           <button
             type="button"
             onClick={closeLightbox}
-            style={{ position: "absolute", top: 12, right: 12, zIndex: 100000 }}
+            style={{ position: "absolute", top: 10, right: 10, zIndex: 100000 }}
             className="flex h-12 w-12 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
             aria-label="Close"
           >
@@ -234,57 +248,50 @@ export default function ShopTab() {
             </svg>
           </button>
 
-          {/* Prev */}
+          {/* Prev — vertically centered, semi-transparent on mobile */}
           {total > 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", zIndex: 100000 }}
-              className="flex h-12 w-12 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
+              style={{ position: "absolute", left: 6, top: "50%", transform: "translateY(-50%)", zIndex: 100000 }}
+              className="flex h-11 w-11 items-center justify-center border border-white/15 bg-black/60 text-white/80 transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 hover:text-white sm:h-12 sm:w-12 sm:border-white/20 sm:bg-black/80 sm:text-white"
               aria-label="Previous image"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
           )}
 
-          {/* Next */}
+          {/* Next — vertically centered, semi-transparent on mobile */}
           {total > 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goNext(); }}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", zIndex: 100000 }}
-              className="flex h-12 w-12 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
+              style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", zIndex: 100000 }}
+              className="flex h-11 w-11 items-center justify-center border border-white/15 bg-black/60 text-white/80 transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 hover:text-white sm:h-12 sm:w-12 sm:border-white/20 sm:bg-black/80 sm:text-white"
               aria-label="Next image"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M9 18l6-6-6-6" />
               </svg>
             </button>
           )}
 
-          {/* Grid viewer: image (1fr) + caption (auto) */}
+          {/* Grid: image row (1fr) + caption row (auto) */}
           <div
+            className="p-3 sm:p-4"
             style={{
               display: "grid",
               gridTemplateRows: "1fr auto",
               height: "100dvh",
               width: "100vw",
-              padding: "16px",
               boxSizing: "border-box",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Image area — min-h-0 prevents 1fr from overflowing */}
-            <div
-              style={{
-                minHeight: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            {/* Image area — min-h-0 critical for 1fr not overflowing */}
+            <div style={{ minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={activeProd.image}
@@ -293,23 +300,23 @@ export default function ShopTab() {
                   display: "block",
                   width: "auto",
                   height: "auto",
-                  maxWidth: "min(92vw, 1100px)",
-                  maxHeight: "calc(100dvh - 130px)",
+                  maxWidth: "min(94vw, 1100px)",
+                  maxHeight: "calc(100dvh - 150px)",
                   objectFit: "contain",
                   boxShadow: "0 0 0 1px rgba(59,130,246,0.3)",
                 }}
               />
             </div>
 
-            {/* Caption */}
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: "8px", paddingTop: "10px", textAlign: "center" }}>
-              <span style={{ fontWeight: 600, color: "#fff", fontSize: "15px" }}>{activeProd.name}</span>
-              <span style={{ color: "#52525b" }}>·</span>
-              <span style={{ color: "#a1a1aa", fontSize: "13px" }}>{activeProd.variant}</span>
+            {/* Caption — compact on mobile */}
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pt-2 text-center">
+              <span className="text-sm font-semibold text-white sm:text-[15px]">{activeProd.name}</span>
+              <span className="text-zinc-600">·</span>
+              <span className="text-xs text-zinc-400 sm:text-[13px]">{activeProd.variant}</span>
               {total > 1 && (
                 <>
-                  <span style={{ color: "#52525b" }}>·</span>
-                  <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#52525b" }}>{(lightboxIndex ?? 0) + 1} / {total}</span>
+                  <span className="text-zinc-600">·</span>
+                  <span className="font-mono text-[10px] text-zinc-600">{(lightboxIndex ?? 0) + 1} / {total}</span>
                 </>
               )}
             </div>
