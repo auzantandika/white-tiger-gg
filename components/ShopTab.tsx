@@ -139,11 +139,8 @@ export default function ShopTab() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {PRODUCTS.map((product) => (
-          <a
+          <div
             key={product.id}
-            href={product.url}
-            target="_blank"
-            rel="noopener noreferrer"
             className="group flex flex-col border border-white/10 bg-white/[0.02] transition-all hover:border-white/20 hover:bg-white/[0.04]"
           >
             <div className="relative aspect-square w-full overflow-hidden bg-zinc-900">
@@ -151,7 +148,7 @@ export default function ShopTab() {
                 <button
                   type="button"
                   className="h-full w-full"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLightbox({ image: product.image!, name: product.name, variant: product.variant }); }}
+                  onClick={() => setLightbox({ image: product.image!, name: product.name, variant: product.variant })}
                   aria-label={`View ${product.name} ${product.variant}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -163,15 +160,13 @@ export default function ShopTab() {
                 </button>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-2 p-4">
-                  <span className="font-mono text-3xl font-bold text-white/10">
-                    WT
-                  </span>
+                  <span className="font-mono text-3xl font-bold text-white/10">WT</span>
                   <span className="text-center font-mono text-[8px] uppercase tracking-widest text-zinc-700">
                     No Image
                   </span>
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
             </div>
 
             <div className="flex flex-1 flex-col gap-1 p-3">
@@ -187,12 +182,17 @@ export default function ShopTab() {
               </p>
               <p className="text-[11px] text-zinc-500">{product.variant}</p>
               <div className="mt-auto pt-2">
-                <span className="font-mono text-[9px] uppercase tracking-wider text-orange-400/70 transition-colors group-hover:text-orange-400">
+                <a
+                  href={product.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[9px] uppercase tracking-wider text-orange-400/70 transition-colors hover:text-orange-400"
+                >
                   Buy on Shopee →
-                </span>
+                </a>
               </div>
             </div>
-          </a>
+          </div>
         ))}
       </div>
 
