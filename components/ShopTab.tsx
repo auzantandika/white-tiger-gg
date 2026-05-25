@@ -212,7 +212,7 @@ export default function ShopTab() {
           <button
             type="button"
             onClick={closeLightbox}
-            className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-4 sm:top-4"
+            className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-4 sm:top-4"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -225,7 +225,7 @@ export default function ShopTab() {
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:left-4"
+              className="absolute left-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:left-3"
               aria-label="Previous image"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -239,7 +239,7 @@ export default function ShopTab() {
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goNext(); }}
-              className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-4"
+              className="absolute right-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-3"
               aria-label="Next image"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -248,26 +248,22 @@ export default function ShopTab() {
             </button>
           )}
 
-          {/* Image container */}
+          {/* Scrollable content — stops click propagation */}
           <div
-            className="flex flex-col items-center gap-3 px-14 sm:px-20"
+            className="relative z-10 flex max-h-[94vh] w-full flex-col items-center gap-3 overflow-y-auto py-4"
             onClick={(e) => e.stopPropagation()}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={activeProd.image}
               alt={`${activeProd.name} ${activeProd.variant}`}
-              className="ring-1 ring-blue-500/30"
+              className="block w-auto object-contain ring-1 ring-blue-500/30"
               style={{
-                maxWidth: "min(90vw, 640px)",
-                maxHeight: "85vh",
-                width: "auto",
-                height: "auto",
-                objectFit: "contain",
-                display: "block",
+                maxWidth: "92vw",
+                maxHeight: "75vh",
               }}
             />
-            <div className="flex items-center gap-3 text-center">
+            <div className="flex flex-wrap items-center justify-center gap-2 px-4 text-center">
               <p className="font-semibold text-white">{activeProd.name}</p>
               <span className="text-zinc-600">·</span>
               <p className="text-sm text-zinc-400">{activeProd.variant}</p>
