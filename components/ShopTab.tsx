@@ -151,7 +151,7 @@ export default function ShopTab() {
                 <button
                   type="button"
                   className="h-full w-full"
-                  onClick={(e) => { e.preventDefault(); setLightbox({ image: product.image!, name: product.name, variant: product.variant }); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLightbox({ image: product.image!, name: product.name, variant: product.variant }); }}
                   aria-label={`View ${product.name} ${product.variant}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
