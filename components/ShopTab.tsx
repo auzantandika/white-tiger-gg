@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import StreamingMonitorFooter from "./StreamingMonitorFooter";
 
-const PRODUCTS = [
+const PRODUCTS_WITH_IMAGES = [
   {
     id: "once-a-tiger-white",
     name: "Once A Tiger",
@@ -68,7 +68,9 @@ const PRODUCTS = [
     url: "https://shopee.co.id/WHITE-TIGER-Hoodie-Tiger-Doesnt-Forgive-i.1702868540.57906934702",
     image: "/images/hoodie-tiger.png",
   },
-];
+] as const;
+
+const PRODUCTS = PRODUCTS_WITH_IMAGES;
 
 const CATEGORY_COLORS: Record<string, string> = {
   Tees: "text-blue-400 border-blue-900/40",
@@ -77,20 +79,32 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function ShopTab() {
-  const [lightbox, setLightbox] = useState<{ image: string; name: string; variant: string } | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const closeLightbox = useCallback(() => setLightbox(null), []);
+  const imageProducts = PRODUCTS.filter((p) => p.image);
+  const total = imageProducts.length;
+
+  const openLightbox = useCallback((idx: number) => setLightboxIndex(idx), []);
+  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+  const goPrev = useCallback(() => setLightboxIndex((i) => (i === null ? null : (i - 1 + total) % total)), [total]);
+  const goNext = useCallback(() => setLightboxIndex((i) => (i === null ? null : (i + 1) % total)), [total]);
 
   useEffect(() => {
-    if (!lightbox) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeLightbox(); };
+    if (lightboxIndex === null) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowLeft") goPrev();
+      if (e.key === "ArrowRight") goNext();
+    };
     window.addEventListener("keydown", handler);
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", handler);
       document.body.style.overflow = "";
     };
-  }, [lightbox, closeLightbox]);
+  }, [lightboxIndex, closeLightbox, goPrev, goNext]);
+
+  const activeProd = lightboxIndex !== null ? imageProducts[lightboxIndex] : null;
 
   return (
     <div className="flex flex-col gap-6 py-4 sm:py-6">
@@ -113,11 +127,9 @@ export default function ShopTab() {
       </div>
 
       <div className="flex items-center justify-between">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-            {PRODUCTS.length} products available
-          </p>
-        </div>
+        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+          {PRODUCTS.length} products available
+        </p>
         <a
           href="https://shopee.co.id/whitetigerinc"
           target="_blank"
@@ -125,25 +137,14 @@ export default function ShopTab() {
           className="flex shrink-0 items-center gap-2 border border-orange-500/40 bg-orange-500/10 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-orange-400 transition-all hover:border-orange-400 hover:bg-orange-500/20"
         >
           View All
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </a>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {PRODUCTS.map((product) => (
+        {PRODUCTS.map((product, idx) => (
           <div
             key={product.id}
             className="group flex flex-col border border-white/10 bg-white/[0.02] transition-all hover:border-white/20 hover:bg-white/[0.04]"
@@ -153,7 +154,7 @@ export default function ShopTab() {
                 <button
                   type="button"
                   className="h-full w-full"
-                  onClick={() => setLightbox({ image: product.image!, name: product.name, variant: product.variant })}
+                  onClick={() => openLightbox(idx)}
                   aria-label={`View ${product.name} ${product.variant}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -166,25 +167,17 @@ export default function ShopTab() {
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-2 p-4">
                   <span className="font-mono text-3xl font-bold text-white/10">WT</span>
-                  <span className="text-center font-mono text-[8px] uppercase tracking-widest text-zinc-700">
-                    No Image
-                  </span>
+                  <span className="text-center font-mono text-[8px] uppercase tracking-widest text-zinc-700">No Image</span>
                 </div>
               )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
             </div>
 
             <div className="flex flex-1 flex-col gap-1 p-3">
-              <span
-                className={`w-fit border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest ${
-                  CATEGORY_COLORS[product.category] ?? "text-zinc-400 border-white/10"
-                }`}
-              >
+              <span className={`w-fit border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest ${CATEGORY_COLORS[product.category] ?? "text-zinc-400 border-white/10"}`}>
                 {product.category}
               </span>
-              <p className="mt-1 text-sm font-semibold leading-tight text-white">
-                {product.name}
-              </p>
+              <p className="mt-1 text-sm font-semibold leading-tight text-white">{product.name}</p>
               <p className="text-[11px] text-zinc-500">{product.variant}</p>
               <div className="mt-auto pt-2">
                 <a
@@ -207,33 +200,83 @@ export default function ShopTab() {
 
       <StreamingMonitorFooter />
 
-      {lightbox && (
+      {activeProd && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black p-4 sm:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${activeProd.name} ${activeProd.variant}`}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-sm"
           onClick={closeLightbox}
         >
-          <div
-            className="relative flex max-h-full w-full max-w-2xl flex-col"
-            style={{ maxHeight: "calc(100dvh - 2rem)" }}
-            onClick={(e) => e.stopPropagation()}
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={closeLightbox}
+            className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-4 sm:top-4"
+            aria-label="Close"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Prev arrow */}
+          {total > 1 && (
             <button
               type="button"
-              onClick={closeLightbox}
-              className="absolute -right-3 -top-3 z-10 flex h-8 w-8 items-center justify-center border border-white/20 bg-black text-white hover:border-white/40"
-              aria-label="Close"
+              onClick={(e) => { e.stopPropagation(); goPrev(); }}
+              className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:left-4"
+              aria-label="Previous image"
             >
-              ✕
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
             </button>
+          )}
+
+          {/* Next arrow */}
+          {total > 1 && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); goNext(); }}
+              className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-4"
+              aria-label="Next image"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          )}
+
+          {/* Image container */}
+          <div
+            className="flex flex-col items-center gap-3 px-14 sm:px-20"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={lightbox.image}
-              alt={`${lightbox.name} ${lightbox.variant}`}
-              className="min-h-0 flex-1 w-full object-contain"
+              src={activeProd.image}
+              alt={`${activeProd.name} ${activeProd.variant}`}
+              className="ring-1 ring-blue-500/30"
+              style={{
+                maxWidth: "min(90vw, 640px)",
+                maxHeight: "85vh",
+                width: "auto",
+                height: "auto",
+                objectFit: "contain",
+                display: "block",
+              }}
             />
-            <div className="shrink-0 border border-white/10 bg-black px-4 py-3 text-center">
-              <p className="font-semibold text-white">{lightbox.name}</p>
-              <p className="text-xs text-zinc-400">{lightbox.variant}</p>
+            <div className="flex items-center gap-3 text-center">
+              <p className="font-semibold text-white">{activeProd.name}</p>
+              <span className="text-zinc-600">·</span>
+              <p className="text-sm text-zinc-400">{activeProd.variant}</p>
+              {total > 1 && (
+                <>
+                  <span className="text-zinc-600">·</span>
+                  <p className="font-mono text-[10px] text-zinc-600">{(lightboxIndex ?? 0) + 1} / {total}</p>
+                </>
+              )}
             </div>
           </div>
         </div>
