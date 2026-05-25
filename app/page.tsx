@@ -1,12 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Header from "@/components/Header";
-import PlayerFinderTab from "@/components/PlayerFinderTab";
-import ShopTab from "@/components/ShopTab";
-import StreamingTab from "@/components/StreamingTab";
 import TabButton from "@/components/TabButton";
 import type { TabId } from "@/lib/types";
+
+const StreamingTab = dynamic(() => import("@/components/StreamingTab"), {
+  loading: () => <div className="flex-1 min-h-[60vh]" />,
+  ssr: false,
+});
+const PlayerFinderTab = dynamic(() => import("@/components/PlayerFinderTab"), {
+  loading: () => <div className="flex-1 min-h-[60vh]" />,
+  ssr: false,
+});
+const ShopTab = dynamic(() => import("@/components/ShopTab"), {
+  loading: () => <div className="flex-1 min-h-[60vh]" />,
+  ssr: false,
+});
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("streaming");

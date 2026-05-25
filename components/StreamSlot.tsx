@@ -116,6 +116,7 @@ export default function StreamSlot({
               src={buildEmbedUrl(streamer.videoId)}
               title={`${streamer.name} live stream`}
               className="absolute inset-0 h-full w-full"
+              loading="lazy"
               allowFullScreen
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             />
