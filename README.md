@@ -1,11 +1,12 @@
 # White Tiger GG
 
-Operations portal for the **WHITE TIGER** GTA 5 Roleplay faction.
+Official website for **WHITE TIGER** — streaming monitor, player finder, and merchandise shop.
 
 ## Features
 
 - **Streaming Monitor** — multi-stream YouTube live dashboard with auto-assignment
 - **Player Finder** — live FiveM server roster search
+- **Shop** — official White Tiger merchandise catalog
 
 ## Local development
 
