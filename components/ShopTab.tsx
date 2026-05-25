@@ -1,3 +1,7 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
 const PRODUCTS = [
   {
     id: "once-a-tiger-white",
@@ -72,6 +76,17 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function ShopTab() {
+  const [lightbox, setLightbox] = useState<{ image: string; name: string; variant: string } | null>(null);
+
+  const closeLightbox = useCallback(() => setLightbox(null), []);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeLightbox(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [lightbox, closeLightbox]);
+
   return (
     <div className="flex flex-col gap-6 py-4 sm:py-6">
       <div className="relative w-full overflow-hidden rounded border border-white/10">
@@ -133,12 +148,19 @@ export default function ShopTab() {
           >
             <div className="relative aspect-square w-full overflow-hidden bg-zinc-900">
               {product.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={product.image}
-                  alt={`${product.name} ${product.variant}`}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
+                <button
+                  type="button"
+                  className="h-full w-full"
+                  onClick={(e) => { e.preventDefault(); setLightbox({ image: product.image!, name: product.name, variant: product.variant }); }}
+                  aria-label={`View ${product.name} ${product.variant}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={product.image}
+                    alt={`${product.name} ${product.variant}`}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </button>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-2 p-4">
                   <span className="font-mono text-3xl font-bold text-white/10">
@@ -177,6 +199,37 @@ export default function ShopTab() {
       <p className="text-center font-mono text-[9px] uppercase tracking-widest text-zinc-700">
         Official store — shopee.co.id/whitetigerinc
       </p>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          onClick={closeLightbox}
+        >
+          <div
+            className="relative max-h-[90vh] max-w-2xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeLightbox}
+              className="absolute -right-3 -top-3 z-10 flex h-8 w-8 items-center justify-center border border-white/20 bg-black text-white hover:border-white/40"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lightbox.image}
+              alt={`${lightbox.name} ${lightbox.variant}`}
+              className="max-h-[80vh] w-full object-contain"
+            />
+            <div className="border border-white/10 bg-black/80 px-4 py-3 text-center">
+              <p className="font-semibold text-white">{lightbox.name}</p>
+              <p className="text-xs text-zinc-400">{lightbox.variant}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
