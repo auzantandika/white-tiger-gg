@@ -34,7 +34,7 @@ function getSlotMinHeight(
   if (isExpanded && layout === "1x1") {
     return "min-h-[min(70vh,880px)]";
   }
-  return "";
+  return "min-h-[200px]";
 }
 
 export default function StreamSlot({
@@ -91,7 +91,7 @@ export default function StreamSlot({
           }
         }}
         className={`relative w-full min-w-0 overflow-hidden border bg-black transition-all duration-300 ease-in-out ${
-          useAspectRatio ? "aspect-video" : "flex-1"
+          useAspectRatio ? "aspect-[16/10]" : "flex-1"
         } ${slotMinHeight} ${
           isSelected
             ? "border-blue-500 ring-1 ring-blue-500/40"

@@ -124,7 +124,20 @@ export default function StreamingMonitor() {
       setCacheStale(normalized.cacheStale);
       setCacheSeconds(normalized.cacheSeconds);
       setStatusMessage(normalized.message);
-      setRefreshCountdown(normalized.cacheSeconds);
+
+      // Calculate countdown from server's nextScanAt so page refresh
+      // doesn't reset the timer — it reflects the actual server scan schedule.
+      if (normalized.nextScanAt) {
+        const secondsUntilNext = Math.max(
+          0,
+          Math.round(
+            (new Date(normalized.nextScanAt).getTime() - Date.now()) / 1000,
+          ),
+        );
+        setRefreshCountdown(secondsUntilNext);
+      } else {
+        setRefreshCountdown(normalized.cacheSeconds);
+      }
       setError(null);
       setHasFetchedOnce(true);
     } catch (err) {
