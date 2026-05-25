@@ -361,6 +361,12 @@ export const STREAMER_CHANNELS: StreamerChannel[] = [
     channelId: "UC9IgpjBu3ATJxdHYtSDBDag",
     channelUrl: "https://www.youtube.com/@onlyoscarrr",
   },
+  {
+    id: "xnaam",
+    name: "Xnaam",
+    channelId: "UC9lQSojQCWl4pPYgjZidzzQ",
+    channelUrl: "https://www.youtube.com/@xnaamyt",
+  },
 ];
 
 export function getStreamerInitial(name: string): string {

@@ -360,6 +360,12 @@ module.exports = {
     "name": "Onlyoscarrr",
     "channelId": "UC9IgpjBu3ATJxdHYtSDBDag",
     "channelUrl": "https://www.youtube.com/@onlyoscarrr"
+  },
+  {
+    "id": "xnaam",
+    "name": "Xnaam",
+    "channelId": "UC9lQSojQCWl4pPYgjZidzzQ",
+    "channelUrl": "https://www.youtube.com/@xnaamyt"
   }
 ],
 };
