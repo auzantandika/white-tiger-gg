@@ -79,7 +79,7 @@ export default function ShopTab() {
         <img
           src="/images/shop-catalog.png"
           alt="White Tiger merchandise catalog"
-          className="w-full object-cover max-h-[320px] sm:max-h-[400px]"
+          className="w-full object-contain max-h-[320px] sm:max-h-[400px]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
         <div className="absolute bottom-0 left-0 p-4 sm:p-6">
