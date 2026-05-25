@@ -366,6 +366,12 @@ module.exports = {
     "name": "Xnaam",
     "channelId": "UC9lQSojQCWl4pPYgjZidzzQ",
     "channelUrl": "https://www.youtube.com/@xnaamyt"
+  },
+  {
+    "id": "malfwashere",
+    "name": "Malfwashere",
+    "channelId": "UC97QOZdstRtyofL6HibrorA",
+    "channelUrl": "https://www.youtube.com/@malfwashere"
   }
 ],
 };
