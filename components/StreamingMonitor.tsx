@@ -152,16 +152,11 @@ export default function StreamingMonitor() {
     }
   }, []);
 
-  const resetRefreshCountdown = useCallback(() => {
-    setRefreshCountdown(cacheSeconds);
-  }, [cacheSeconds]);
-
   const refreshLiveStatus = useCallback(
     async (showLoading = false) => {
       await fetchLiveStatus(showLoading);
-      resetRefreshCountdown();
     },
-    [fetchLiveStatus, resetRefreshCountdown],
+    [fetchLiveStatus],
   );
 
   useEffect(() => {
