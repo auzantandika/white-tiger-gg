@@ -85,7 +85,11 @@ export default function ShopTab() {
     if (!lightbox) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeLightbox(); };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handler);
+      document.body.style.overflow = "";
+    };
   }, [lightbox, closeLightbox]);
 
   return (
@@ -205,11 +209,12 @@ export default function ShopTab() {
 
       {lightbox && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black p-4"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black p-4 sm:p-8"
           onClick={closeLightbox}
         >
           <div
-            className="relative max-h-[90vh] max-w-2xl w-full"
+            className="relative flex max-h-full w-full max-w-2xl flex-col"
+            style={{ maxHeight: "calc(100dvh - 2rem)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -224,9 +229,9 @@ export default function ShopTab() {
             <img
               src={lightbox.image}
               alt={`${lightbox.name} ${lightbox.variant}`}
-              className="max-h-[80vh] w-full object-contain"
+              className="min-h-0 flex-1 w-full object-contain"
             />
-            <div className="border border-white/10 bg-black/80 px-4 py-3 text-center">
+            <div className="shrink-0 border border-white/10 bg-black px-4 py-3 text-center">
               <p className="font-semibold text-white">{lightbox.name}</p>
               <p className="text-xs text-zinc-400">{lightbox.variant}</p>
             </div>
