@@ -76,7 +76,7 @@ export interface PlayersResponse {
   players: Player[];
 }
 
-export type TabId = "streaming" | "player-finder";
+export type TabId = "streaming" | "player-finder" | "shop";
 
 export type GridLayout = "1x1" | "2x1" | "2x2" | "3x2" | "3x3" | "4x2" | "ALL";
 

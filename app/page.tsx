@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import PlayerFinderTab from "@/components/PlayerFinderTab";
+import ShopTab from "@/components/ShopTab";
 import StreamingTab from "@/components/StreamingTab";
 import TabButton from "@/components/TabButton";
 import type { TabId } from "@/lib/types";
@@ -10,6 +11,7 @@ import type { TabId } from "@/lib/types";
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("streaming");
   const isStreaming = activeTab === "streaming";
+  const isShop = activeTab === "shop";
 
   return (
     <div className="scanlines grid-bg relative min-h-screen overflow-x-hidden">
@@ -20,7 +22,7 @@ export default function Home() {
           isStreaming ? "pt-1" : "pt-2 sm:pb-12"
         }`}
       >
-        {!isStreaming && <Header />}
+        {!isStreaming && !isShop && <Header />}
 
         <nav
           className={`portal-glow flex w-full gap-2 rounded border border-white/10 bg-black/60 p-1.5 backdrop-blur-sm ${
@@ -40,6 +42,12 @@ export default function Home() {
             active={activeTab === "player-finder"}
             onClick={setActiveTab}
           />
+          <TabButton
+            id="shop"
+            label="Shop"
+            active={activeTab === "shop"}
+            onClick={setActiveTab}
+          />
         </nav>
 
         <main
@@ -49,7 +57,9 @@ export default function Home() {
               : "portal-glow mt-4 rounded border border-white/10 bg-black/70 p-3 backdrop-blur-sm sm:mt-6 sm:p-6"
           }`}
         >
-          {isStreaming ? <StreamingTab /> : <PlayerFinderTab />}
+          {activeTab === "streaming" && <StreamingTab />}
+          {activeTab === "player-finder" && <PlayerFinderTab />}
+          {activeTab === "shop" && <ShopTab />}
         </main>
 
         {!isStreaming && (
