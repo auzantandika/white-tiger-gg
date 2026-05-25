@@ -166,8 +166,8 @@ module.exports = {
   {
     "id": "xinceeedotexe",
     "name": "Xinceee Dot Exe",
-    "channelId": "UC7p8Ro16hIUqCoy1GhmBGWQ",
-    "channelUrl": "https://www.youtube.com/@Xinceeedotexe"
+    "channelId": "UCzMxCjtMzhCn8JTehQ7rkEg",
+    "channelUrl": "https://www.youtube.com/@xincee"
   },
   {
     "id": "abizzaaditya",
@@ -372,6 +372,12 @@ module.exports = {
     "name": "Malfwashere",
     "channelId": "UC97QOZdstRtyofL6HibrorA",
     "channelUrl": "https://www.youtube.com/@malfwashere"
+  },
+  {
+    "id": "kiaraawrrr",
+    "name": "Kiaraawrrr",
+    "channelId": "UCRvCK-lrHfllMvAy4x7Lzjg",
+    "channelUrl": "https://www.youtube.com/@kiaraawrrr"
   }
 ],
 };
