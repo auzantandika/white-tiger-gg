@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "WHITE TIGER GG",
-  description: "White Tiger GG — GTA 5 Roleplay faction portal.",
+  description: "White Tiger — Official Website.",
   icons: {
     icon: [
       { url: "/icon.png", sizes: "32x32", type: "image/png" },
