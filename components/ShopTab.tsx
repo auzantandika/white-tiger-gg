@@ -1,68 +1,167 @@
+const PRODUCTS = [
+  {
+    id: "once-a-tiger-black",
+    name: "Once A Tiger",
+    variant: "Black",
+    category: "Tees",
+    url: "https://shopee.co.id/WHITE-TIGER-Once-A-Tiger-Black-i.1702868540.42327271606",
+    image: null,
+  },
+  {
+    id: "once-a-tiger-white",
+    name: "Once A Tiger",
+    variant: "White",
+    category: "Tees",
+    url: "https://shopee.co.id/WHITE-TIGER-Once-A-Tiger-White-i.1702868540.50453175591",
+    image: null,
+  },
+  {
+    id: "united-fury-black",
+    name: "United Fury",
+    variant: "Black",
+    category: "Tees",
+    url: "https://shopee.co.id/WHITE-TIGER-United-Fury-Black-i.1702868540.52153161881",
+    image: null,
+  },
+  {
+    id: "united-fury-white",
+    name: "United Fury",
+    variant: "White",
+    category: "Tees",
+    url: "https://shopee.co.id/WHITE-TIGER-United-Fury-White-i.1702868540.49703195547",
+    image: null,
+  },
+  {
+    id: "rawr-black-wash",
+    name: "Rawr",
+    variant: "Black Wash",
+    category: "Tees",
+    url: "https://shopee.co.id/WHITE-TIGER-Tees-Rawr-Black-Wash-i.1702868540.53709770854",
+    image: null,
+  },
+  {
+    id: "rawr-white",
+    name: "Rawr",
+    variant: "White",
+    category: "Tees",
+    url: "https://shopee.co.id/WHITE-TIGER-Tees-Rawr-White-i.1702868540.53159764738",
+    image: null,
+  },
+  {
+    id: "varsity-2",
+    name: "Varsity 2.0",
+    variant: "From Chaos Come Strength",
+    category: "Varsity",
+    url: "https://shopee.co.id/WHITE-TIGER-Varsity-2.0-From-Chaos-Come-Strength-i.1702868540.49103661781",
+    image: null,
+  },
+  {
+    id: "hoodie-tiger",
+    name: "Tiger Doesn't Forgive",
+    variant: "Hoodie",
+    category: "Hoodie",
+    url: "https://shopee.co.id/WHITE-TIGER-Hoodie-Tiger-Doesnt-Forgive-i.1702868540.57906934702",
+    image: null,
+  },
+];
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Tees: "text-blue-400 border-blue-900/40",
+  Varsity: "text-purple-400 border-purple-900/40",
+  Hoodie: "text-amber-400 border-amber-900/40",
+};
+
 export default function ShopTab() {
   return (
-    <div className="flex flex-col items-center gap-8 py-8 sm:py-12">
-      <div className="text-center">
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-blue-500">
-          Official Store
-        </p>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          White Tiger Shop
-        </h2>
-        <p className="mt-2 text-sm text-zinc-400">
-          Merchandise resmi White Tiger GG — tersedia di Shopee
-        </p>
+    <div className="flex flex-col gap-6 py-4 sm:py-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-blue-500">
+            Official Merchandise
+          </p>
+          <h2 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">
+            White Tiger Shop
+          </h2>
+        </div>
+        <a
+          href="https://shopee.co.id/whitetigerinc"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex shrink-0 items-center gap-2 border border-orange-500/40 bg-orange-500/10 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-orange-400 transition-all hover:border-orange-400 hover:bg-orange-500/20"
+        >
+          Lihat Semua
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </a>
       </div>
 
-      <a
-        href="https://shopee.co.id/whitetigerinc"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="group flex items-center gap-3 border border-orange-500/40 bg-orange-500/10 px-8 py-4 font-mono text-sm uppercase tracking-widest text-orange-400 transition-all hover:border-orange-400 hover:bg-orange-500/20 hover:text-orange-300"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <path d="M16 10a4 4 0 0 1-8 0" />
-        </svg>
-        Buka Toko di Shopee
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="transition-transform group-hover:translate-x-1"
-          aria-hidden="true"
-        >
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
-      </a>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {PRODUCTS.map((product) => (
+          <a
+            key={product.id}
+            href={product.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex flex-col border border-white/10 bg-white/[0.02] transition-all hover:border-white/20 hover:bg-white/[0.04]"
+          >
+            <div className="relative aspect-square w-full overflow-hidden bg-zinc-900">
+              {product.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={product.image}
+                  alt={`${product.name} ${product.variant}`}
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 p-4">
+                  <span className="font-mono text-3xl font-bold text-white/10">
+                    WT
+                  </span>
+                  <span className="text-center font-mono text-[8px] uppercase tracking-widest text-zinc-700">
+                    {product.name}
+                  </span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
 
-      <div className="w-full max-w-2xl border border-white/5 bg-white/[0.02] p-6 text-center">
-        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-          shopee.co.id/whitetigerinc
-        </p>
-        <p className="mt-3 text-xs text-zinc-500">
-          Klik tombol di atas untuk melihat semua produk yang tersedia di toko resmi kami.
-          <br />
-          Tersedia berbagai merchandise eksklusif White Tiger GG.
-        </p>
+            <div className="flex flex-1 flex-col gap-1 p-3">
+              <span
+                className={`w-fit border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest ${
+                  CATEGORY_COLORS[product.category] ?? "text-zinc-400 border-white/10"
+                }`}
+              >
+                {product.category}
+              </span>
+              <p className="mt-1 text-sm font-semibold leading-tight text-white">
+                {product.name}
+              </p>
+              <p className="text-[11px] text-zinc-500">{product.variant}</p>
+              <div className="mt-auto pt-2">
+                <span className="font-mono text-[9px] uppercase tracking-wider text-orange-400/70 transition-colors group-hover:text-orange-400">
+                  Beli di Shopee →
+                </span>
+              </div>
+            </div>
+          </a>
+        ))}
       </div>
+
+      <p className="text-center font-mono text-[9px] uppercase tracking-widest text-zinc-700">
+        shopee.co.id/whitetigerinc
+      </p>
     </div>
   );
 }
