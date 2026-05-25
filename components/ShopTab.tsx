@@ -205,14 +205,15 @@ export default function ShopTab() {
           role="dialog"
           aria-modal="true"
           aria-label={`${activeProd.name} ${activeProd.variant}`}
-          className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm"
+          style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(4px)" }}
           onClick={closeLightbox}
         >
-          {/* Close — fixed top-right of viewport */}
+          {/* Close — top-right of viewport */}
           <button
             type="button"
             onClick={closeLightbox}
-            className="absolute right-3 top-3 z-30 flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-4 sm:top-4"
+            style={{ position: "absolute", top: 12, right: 12, zIndex: 10000 }}
+            className="flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -220,12 +221,13 @@ export default function ShopTab() {
             </svg>
           </button>
 
-          {/* Prev — vertically centered in viewport */}
+          {/* Prev — vertically centered */}
           {total > 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              className="absolute left-2 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:left-3"
+              style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", zIndex: 10000 }}
+              className="flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
               aria-label="Previous image"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -234,12 +236,13 @@ export default function ShopTab() {
             </button>
           )}
 
-          {/* Next — vertically centered in viewport */}
+          {/* Next — vertically centered */}
           {total > 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goNext(); }}
-              className="absolute right-2 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-3"
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", zIndex: 10000 }}
+              className="flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
               aria-label="Next image"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -248,34 +251,55 @@ export default function ShopTab() {
             </button>
           )}
 
-          {/* Full-viewport centering wrapper */}
-          <div className="flex h-dvh w-screen items-center justify-center p-4">
-            {/* Content — scrollable if somehow still overflows */}
+          {/* Viewer grid: image row (1fr) + caption row (auto) */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateRows: "1fr auto",
+              height: "100dvh",
+              width: "100vw",
+              padding: "24px",
+              boxSizing: "border-box",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Image area — min-h-0 is critical so 1fr doesn't overflow */}
             <div
-              className="flex max-h-[92dvh] max-w-[96vw] flex-col items-center justify-center gap-3 overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
+              style={{
+                minHeight: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={activeProd.image}
                 alt={`${activeProd.name} ${activeProd.variant}`}
-                className="block w-auto object-contain ring-1 ring-blue-500/30"
                 style={{
-                  maxWidth: "92vw",
-                  maxHeight: "calc(100dvh - 140px)",
+                  display: "block",
+                  width: "auto",
+                  height: "auto",
+                  maxWidth: "min(92vw, 1100px)",
+                  maxHeight: "calc(100dvh - 120px)",
+                  objectFit: "contain",
+                  boxShadow: "0 0 0 1px rgba(59,130,246,0.3)",
                 }}
               />
-              <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 text-center">
-                <p className="font-semibold text-white">{activeProd.name}</p>
-                <span className="text-zinc-600">·</span>
-                <p className="text-sm text-zinc-400">{activeProd.variant}</p>
-                {total > 1 && (
-                  <>
-                    <span className="text-zinc-600">·</span>
-                    <p className="font-mono text-[10px] text-zinc-600">{(lightboxIndex ?? 0) + 1} / {total}</p>
-                  </>
-                )}
-              </div>
+            </div>
+
+            {/* Caption row */}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-3 text-center">
+              <p className="font-semibold text-white">{activeProd.name}</p>
+              <span className="text-zinc-600">·</span>
+              <p className="text-sm text-zinc-400">{activeProd.variant}</p>
+              {total > 1 && (
+                <>
+                  <span className="text-zinc-600">·</span>
+                  <p className="font-mono text-[10px] text-zinc-600">{(lightboxIndex ?? 0) + 1} / {total}</p>
+                </>
+              )}
             </div>
           </div>
         </div>
