@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import StreamingMonitorFooter from "./StreamingMonitorFooter";
 
 const PRODUCTS_WITH_IMAGES = [
@@ -80,6 +81,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function ShopTab() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const imageProducts = PRODUCTS.filter((p) => p.image);
   const total = imageProducts.length;
@@ -91,6 +95,7 @@ export default function ShopTab() {
 
   useEffect(() => {
     if (lightboxIndex === null) return;
+    const prev = document.body.style.overflow;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeLightbox();
       if (e.key === "ArrowLeft") goPrev();
@@ -100,7 +105,7 @@ export default function ShopTab() {
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", handler);
-      document.body.style.overflow = "";
+      document.body.style.overflow = prev;
     };
   }, [lightboxIndex, closeLightbox, goPrev, goNext]);
 
@@ -200,77 +205,84 @@ export default function ShopTab() {
 
       <StreamingMonitorFooter />
 
-      {activeProd && (
+      {/* Lightbox rendered via portal directly into document.body */}
+      {mounted && activeProd && createPortal(
         <div
           role="dialog"
           aria-modal="true"
           aria-label={`${activeProd.name} ${activeProd.variant}`}
-          style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(4px)" }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(0,0,0,0.93)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+          }}
           onClick={closeLightbox}
         >
-          {/* Close — top-right of viewport */}
+          {/* Close — top-right */}
           <button
             type="button"
             onClick={closeLightbox}
-            style={{ position: "absolute", top: 12, right: 12, zIndex: 10000 }}
-            className="flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
+            style={{ position: "absolute", top: 12, right: 12, zIndex: 100000 }}
+            className="flex h-12 w-12 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
             aria-label="Close"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
           </button>
 
-          {/* Prev — vertically centered */}
+          {/* Prev */}
           {total > 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", zIndex: 10000 }}
-              className="flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
+              style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", zIndex: 100000 }}
+              className="flex h-12 w-12 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
               aria-label="Previous image"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
           )}
 
-          {/* Next — vertically centered */}
+          {/* Next */}
           {total > 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goNext(); }}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", zIndex: 10000 }}
-              className="flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", zIndex: 100000 }}
+              className="flex h-12 w-12 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60"
               aria-label="Next image"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M9 18l6-6-6-6" />
               </svg>
             </button>
           )}
 
-          {/* Viewer grid: image row (1fr) + caption row (auto) */}
+          {/* Grid viewer: image (1fr) + caption (auto) */}
           <div
             style={{
               display: "grid",
               gridTemplateRows: "1fr auto",
               height: "100dvh",
               width: "100vw",
-              padding: "24px",
+              padding: "16px",
               boxSizing: "border-box",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Image area — min-h-0 is critical so 1fr doesn't overflow */}
+            {/* Image area — min-h-0 prevents 1fr from overflowing */}
             <div
               style={{
                 minHeight: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                overflow: "hidden",
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -282,27 +294,28 @@ export default function ShopTab() {
                   width: "auto",
                   height: "auto",
                   maxWidth: "min(92vw, 1100px)",
-                  maxHeight: "calc(100dvh - 120px)",
+                  maxHeight: "calc(100dvh - 130px)",
                   objectFit: "contain",
                   boxShadow: "0 0 0 1px rgba(59,130,246,0.3)",
                 }}
               />
             </div>
 
-            {/* Caption row */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-3 text-center">
-              <p className="font-semibold text-white">{activeProd.name}</p>
-              <span className="text-zinc-600">·</span>
-              <p className="text-sm text-zinc-400">{activeProd.variant}</p>
+            {/* Caption */}
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: "8px", paddingTop: "10px", textAlign: "center" }}>
+              <span style={{ fontWeight: 600, color: "#fff", fontSize: "15px" }}>{activeProd.name}</span>
+              <span style={{ color: "#52525b" }}>·</span>
+              <span style={{ color: "#a1a1aa", fontSize: "13px" }}>{activeProd.variant}</span>
               {total > 1 && (
                 <>
-                  <span className="text-zinc-600">·</span>
-                  <p className="font-mono text-[10px] text-zinc-600">{(lightboxIndex ?? 0) + 1} / {total}</p>
+                  <span style={{ color: "#52525b" }}>·</span>
+                  <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#52525b" }}>{(lightboxIndex ?? 0) + 1} / {total}</span>
                 </>
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
