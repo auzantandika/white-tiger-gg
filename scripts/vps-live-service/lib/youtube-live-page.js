@@ -288,7 +288,22 @@ async function probeChannelLivePageById(channelId, attempt = 0) {
     return probeChannelLivePageById(channelId, attempt + 1);
   }
 
-  if (trustedCandidateIds.length === 0 && candidateIds.length === 0) {
+  // After all HTML retries, fall back to RSS feed (free, no API quota).
+  // RSS is scoped to the channel so ownership is guaranteed — API still
+  // confirms which video is actually live.
+  if (trustedCandidateIds.length === 0) {
+    const rssIds = await fetchRssVideoIds(channelId);
+    if (rssIds.length > 0) {
+      return {
+        livePageStatus: "rss_fallback",
+        livePageVideoId: rssIds[0],
+        trustedCandidateIds: rssIds,
+        candidateIds,
+      };
+    }
+  }
+
+  if (candidateIds.length === 0) {
     return {
       livePageStatus: "no_video",
       livePageVideoId: "",
@@ -305,6 +320,25 @@ async function probeChannelLivePageById(channelId, attempt = 0) {
     trustedCandidateIds,
     candidateIds,
   };
+}
+
+async function fetchRssVideoIds(channelId) {
+  try {
+    const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(8000),
+      headers: { "Accept": "application/xml,text/xml,*/*" },
+    });
+    if (!response.ok) return [];
+    const text = await response.text();
+    const ids = [];
+    for (const m of text.matchAll(/<yt:videoId>([\w-]{11})<\/yt:videoId>/g)) {
+      ids.push(m[1]);
+    }
+    return ids.slice(0, 5);
+  } catch {
+    return [];
+  }
 }
 
 module.exports = {
