@@ -306,6 +306,54 @@ module.exports = {
     "name": "Asyraf",
     "channelId": "UCt2nCdGIct2TRhtuk-x1rOw",
     "channelUrl": "https://www.youtube.com/channel/UCt2nCdGIct2TRhtuk-x1rOw"
+  },
+  {
+    "id": "agus-badak",
+    "name": "Agus Badak",
+    "channelId": "UCW_ZqTZtq5FIwp9q1TrZ0Ww",
+    "channelUrl": "https://www.youtube.com/@AgusBadak12"
+  },
+  {
+    "id": "oxygenss",
+    "name": "Oxygenss",
+    "channelId": "UCkxPr0lMiQoa4HKrBpdInmA",
+    "channelUrl": "https://www.youtube.com/@oxygenss"
+  },
+  {
+    "id": "shinz3397",
+    "name": "Shinz3397",
+    "channelId": "UCyZiap4ynETcU8cgyzRizjg",
+    "channelUrl": "https://www.youtube.com/@shinz3397"
+  },
+  {
+    "id": "tompel-cardinal",
+    "name": "Tompel Cardinal",
+    "channelId": "UCHWzyUXZVe0uU7fBXd35Oag",
+    "channelUrl": "https://www.youtube.com/@tompelcardinal"
+  },
+  {
+    "id": "axiell-dalopez",
+    "name": "Axiell Dalopez",
+    "channelId": "UCzyas9LuCIlDsxgJD6Vdc4w",
+    "channelUrl": "https://www.youtube.com/@axielldalopez"
+  },
+  {
+    "id": "alethea-lyc",
+    "name": "Alethea Lyc",
+    "channelId": "UCv1tkdQVexXfH30sNKZQedA",
+    "channelUrl": "https://www.youtube.com/@alethealyc"
+  },
+  {
+    "id": "kodo-ch",
+    "name": "Kodo Ch",
+    "channelId": "UCP1mh_WF08CVV2Fw7T43aGQ",
+    "channelUrl": "https://www.youtube.com/@KodoCh"
+  },
+  {
+    "id": "natxcunggg",
+    "name": "Natxcunggg",
+    "channelId": "UCVARRXQVAiAOTVN2RKUiAtw",
+    "channelUrl": "https://www.youtube.com/@natxcunggg"
   }
 ],
 };
