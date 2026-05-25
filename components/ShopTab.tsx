@@ -74,14 +74,29 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default function ShopTab() {
   return (
     <div className="flex flex-col gap-6 py-4 sm:py-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-blue-500">
+      <div className="relative w-full overflow-hidden rounded border border-white/10">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/shop-catalog.png"
+          alt="White Tiger merchandise catalog"
+          className="w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+        <div className="absolute bottom-0 left-0 p-4 sm:p-6">
+          <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-blue-400">
             Official Merchandise
           </p>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
             White Tiger Shop
           </h2>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+            {PRODUCTS.length} products available
+          </p>
         </div>
         <a
           href="https://shopee.co.id/whitetigerinc"
