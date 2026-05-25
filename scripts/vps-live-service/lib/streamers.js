@@ -378,6 +378,12 @@ module.exports = {
     "name": "Kiaraawrrr",
     "channelId": "UCRvCK-lrHfllMvAy4x7Lzjg",
     "channelUrl": "https://www.youtube.com/@kiaraawrrr"
+  },
+  {
+    "id": "dhiedaw",
+    "name": "Dhiedaw",
+    "channelId": "UCZ3mbwc_6t-449dvFXOtaAA",
+    "channelUrl": "https://www.youtube.com/@dhiedaw"
   }
 ],
 };
