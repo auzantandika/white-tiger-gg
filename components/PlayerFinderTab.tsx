@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { SERVER_ID } from "@/lib/constants";
 import type { PlayersResponse } from "@/lib/types";
 import PlayerCard from "./PlayerCard";
+import StreamingMonitorFooter from "./StreamingMonitorFooter";
 
 const REFRESH_INTERVAL_MS = 30_000;
 
@@ -153,6 +154,8 @@ export default function PlayerFinderTab() {
       <p className="mt-6 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
         Auto-refresh every 30 seconds
       </p>
+
+      <StreamingMonitorFooter />
     </section>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import StreamingMonitorFooter from "./StreamingMonitorFooter";
 
 const PRODUCTS = [
   {
@@ -199,6 +200,8 @@ export default function ShopTab() {
       <p className="text-center font-mono text-[9px] uppercase tracking-widest text-zinc-700">
         Official store — shopee.co.id/whitetigerinc
       </p>
+
+      <StreamingMonitorFooter />
 
       {lightbox && (
         <div
