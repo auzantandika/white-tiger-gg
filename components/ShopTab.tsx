@@ -1,19 +1,19 @@
 const PRODUCTS = [
   {
-    id: "once-a-tiger-black",
-    name: "Once A Tiger",
-    variant: "Black",
-    category: "Tees",
-    url: "https://shopee.co.id/WHITE-TIGER-Once-A-Tiger-Black-i.1702868540.42327271606",
-    image: null,
-  },
-  {
     id: "once-a-tiger-white",
     name: "Once A Tiger",
     variant: "White",
     category: "Tees",
     url: "https://shopee.co.id/WHITE-TIGER-Once-A-Tiger-White-i.1702868540.50453175591",
-    image: null,
+    image: "/images/once-a-tiger-white.png",
+  },
+  {
+    id: "once-a-tiger-black",
+    name: "Once A Tiger",
+    variant: "Black",
+    category: "Tees",
+    url: "https://shopee.co.id/WHITE-TIGER-Once-A-Tiger-Black-i.1702868540.42327271606",
+    image: "/images/once-a-tiger-black.png",
   },
   {
     id: "united-fury-black",
@@ -21,7 +21,7 @@ const PRODUCTS = [
     variant: "Black",
     category: "Tees",
     url: "https://shopee.co.id/WHITE-TIGER-United-Fury-Black-i.1702868540.52153161881",
-    image: null,
+    image: "/images/united-fury-black.png",
   },
   {
     id: "united-fury-white",
@@ -29,15 +29,7 @@ const PRODUCTS = [
     variant: "White",
     category: "Tees",
     url: "https://shopee.co.id/WHITE-TIGER-United-Fury-White-i.1702868540.49703195547",
-    image: null,
-  },
-  {
-    id: "rawr-black-wash",
-    name: "Rawr",
-    variant: "Black Wash",
-    category: "Tees",
-    url: "https://shopee.co.id/WHITE-TIGER-Tees-Rawr-Black-Wash-i.1702868540.53709770854",
-    image: null,
+    image: "/images/united-fury-white.png",
   },
   {
     id: "rawr-white",
@@ -45,7 +37,15 @@ const PRODUCTS = [
     variant: "White",
     category: "Tees",
     url: "https://shopee.co.id/WHITE-TIGER-Tees-Rawr-White-i.1702868540.53159764738",
-    image: null,
+    image: "/images/rawr-white.png",
+  },
+  {
+    id: "rawr-black-wash",
+    name: "Rawr",
+    variant: "Black Wash",
+    category: "Tees",
+    url: "https://shopee.co.id/WHITE-TIGER-Tees-Rawr-Black-Wash-i.1702868540.53709770854",
+    image: "/images/rawr-black-wash.png",
   },
   {
     id: "varsity-2",
@@ -53,7 +53,7 @@ const PRODUCTS = [
     variant: "From Chaos Come Strength",
     category: "Varsity",
     url: "https://shopee.co.id/WHITE-TIGER-Varsity-2.0-From-Chaos-Come-Strength-i.1702868540.49103661781",
-    image: null,
+    image: "/images/varsity-2.png",
   },
   {
     id: "hoodie-tiger",
@@ -61,7 +61,7 @@ const PRODUCTS = [
     variant: "Hoodie",
     category: "Hoodie",
     url: "https://shopee.co.id/WHITE-TIGER-Hoodie-Tiger-Doesnt-Forgive-i.1702868540.57906934702",
-    image: null,
+    image: "/images/hoodie-tiger.png",
   },
 ];
 
