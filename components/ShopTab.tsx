@@ -205,14 +205,14 @@ export default function ShopTab() {
           role="dialog"
           aria-modal="true"
           aria-label={`${activeProd.name} ${activeProd.variant}`}
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm"
           onClick={closeLightbox}
         >
-          {/* Close button */}
+          {/* Close — fixed top-right of viewport */}
           <button
             type="button"
             onClick={closeLightbox}
-            className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-4 sm:top-4"
+            className="absolute right-3 top-3 z-30 flex h-11 w-11 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-4 sm:top-4"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -220,12 +220,12 @@ export default function ShopTab() {
             </svg>
           </button>
 
-          {/* Prev arrow */}
+          {/* Prev — vertically centered in viewport */}
           {total > 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              className="absolute left-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:left-3"
+              className="absolute left-2 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:left-3"
               aria-label="Previous image"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -234,12 +234,12 @@ export default function ShopTab() {
             </button>
           )}
 
-          {/* Next arrow */}
+          {/* Next — vertically centered in viewport */}
           {total > 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goNext(); }}
-              className="absolute right-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-3"
+              className="absolute right-2 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/80 text-white transition-colors hover:border-blue-500/60 hover:bg-blue-950/60 sm:right-3"
               aria-label="Next image"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -248,31 +248,34 @@ export default function ShopTab() {
             </button>
           )}
 
-          {/* Scrollable content — stops click propagation */}
-          <div
-            className="relative z-10 flex max-h-[94vh] w-full flex-col items-center gap-3 overflow-y-auto py-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={activeProd.image}
-              alt={`${activeProd.name} ${activeProd.variant}`}
-              className="block w-auto object-contain ring-1 ring-blue-500/30"
-              style={{
-                maxWidth: "92vw",
-                maxHeight: "75vh",
-              }}
-            />
-            <div className="flex flex-wrap items-center justify-center gap-2 px-4 text-center">
-              <p className="font-semibold text-white">{activeProd.name}</p>
-              <span className="text-zinc-600">·</span>
-              <p className="text-sm text-zinc-400">{activeProd.variant}</p>
-              {total > 1 && (
-                <>
-                  <span className="text-zinc-600">·</span>
-                  <p className="font-mono text-[10px] text-zinc-600">{(lightboxIndex ?? 0) + 1} / {total}</p>
-                </>
-              )}
+          {/* Full-viewport centering wrapper */}
+          <div className="flex h-dvh w-screen items-center justify-center p-4">
+            {/* Content — scrollable if somehow still overflows */}
+            <div
+              className="flex max-h-[92dvh] max-w-[96vw] flex-col items-center justify-center gap-3 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={activeProd.image}
+                alt={`${activeProd.name} ${activeProd.variant}`}
+                className="block w-auto object-contain ring-1 ring-blue-500/30"
+                style={{
+                  maxWidth: "92vw",
+                  maxHeight: "calc(100dvh - 140px)",
+                }}
+              />
+              <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 text-center">
+                <p className="font-semibold text-white">{activeProd.name}</p>
+                <span className="text-zinc-600">·</span>
+                <p className="text-sm text-zinc-400">{activeProd.variant}</p>
+                {total > 1 && (
+                  <>
+                    <span className="text-zinc-600">·</span>
+                    <p className="font-mono text-[10px] text-zinc-600">{(lightboxIndex ?? 0) + 1} / {total}</p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
