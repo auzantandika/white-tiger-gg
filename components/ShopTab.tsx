@@ -89,7 +89,7 @@ export default function ShopTab() {
           rel="noopener noreferrer"
           className="flex shrink-0 items-center gap-2 border border-orange-500/40 bg-orange-500/10 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-orange-400 transition-all hover:border-orange-400 hover:bg-orange-500/20"
         >
-          Lihat Semua
+          View All
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="12"
@@ -130,7 +130,7 @@ export default function ShopTab() {
                     WT
                   </span>
                   <span className="text-center font-mono text-[8px] uppercase tracking-widest text-zinc-700">
-                    {product.name}
+                    No Image
                   </span>
                 </div>
               )}
@@ -151,7 +151,7 @@ export default function ShopTab() {
               <p className="text-[11px] text-zinc-500">{product.variant}</p>
               <div className="mt-auto pt-2">
                 <span className="font-mono text-[9px] uppercase tracking-wider text-orange-400/70 transition-colors group-hover:text-orange-400">
-                  Beli di Shopee →
+                  Buy on Shopee →
                 </span>
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function ShopTab() {
       </div>
 
       <p className="text-center font-mono text-[9px] uppercase tracking-widest text-zinc-700">
-        shopee.co.id/whitetigerinc
+        Official store — shopee.co.id/whitetigerinc
       </p>
     </div>
   );
