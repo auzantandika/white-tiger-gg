@@ -354,6 +354,12 @@ module.exports = {
     "name": "Natxcunggg",
     "channelId": "UCVARRXQVAiAOTVN2RKUiAtw",
     "channelUrl": "https://www.youtube.com/@natxcunggg"
+  },
+  {
+    "id": "onlyoscarrr",
+    "name": "Onlyoscarrr",
+    "channelId": "UC9IgpjBu3ATJxdHYtSDBDag",
+    "channelUrl": "https://www.youtube.com/@onlyoscarrr"
   }
 ],
 };
